@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import gsap from 'gsap';
-import { ArrowUpRight, Code2, Layers, Play } from 'lucide-react';
-import { PROJECTS } from '../../data/portfolioData';
-import {
-  MOTION_DURATIONS,
-  MOTION_EASINGS,
-  type ResponsiveMotionProfile,
-} from '../../lib/motionConfig';
+import { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { ArrowUpRight, Eye, Layers, Play } from 'lucide-react';
+import { PROFILE, PROJECTS } from '../../data/portfolioData';
+import { type ResponsiveMotionProfile } from '../../lib/motionConfig';
 import {
   filterProjectsByFocus,
   type ProjectFocusFilter,
   type ProjectItem,
 } from '../../lib/portfolioUtils';
+import { ImageReveal, Reveal, REVEAL_EASE, REVEAL_VIEWPORT } from '../motion/Reveal';
 import { SectionHeader } from '../motion/SectionHeader';
 import { TiltCard } from '../motion/TiltCard';
+import { SectionBadge3D } from '../ui/SectionBadge3D';
+import { TechChip } from '../ui/TechChip';
 
 interface ProjectsSectionProps {
   motionProfile: ResponsiveMotionProfile;
@@ -29,421 +28,324 @@ const PROJECT_FILTERS: { id: ProjectFocusFilter; label: string }[] = [
 
 const PROJECT_ACCENTS: Record<
   ProjectItem['demoMode'],
-  { labelClass: string; hoverBorder: string; topBar: string; indexLabel: string }
+  { hoverBorder: string; glow: string }
 > = {
   event: {
-    labelClass: 'text-[#60A5FA]',
-    hoverBorder: 'hover:border-[#3B82F6]/50',
-    topBar: 'from-[#3B82F6]/55 via-[#60A5FA]/20 to-transparent',
-    indexLabel: '01',
+    hoverBorder: 'hover:border-brand-500/45',
+    glow: 'color-mix(in srgb, var(--color-brand-500) 35%, transparent)',
   },
   leave: {
-    labelClass: 'text-emerald-400',
-    hoverBorder: 'hover:border-emerald-500/45',
-    topBar: 'from-emerald-400/55 via-emerald-500/20 to-transparent',
-    indexLabel: '02',
+    hoverBorder: 'hover:border-emerald-400/40',
+    glow: 'rgba(52,211,153,0.28)',
   },
   ecommerce: {
-    labelClass: 'text-amber-300',
-    hoverBorder: 'hover:border-amber-400/45',
-    topBar: 'from-amber-400/55 via-amber-500/20 to-transparent',
-    indexLabel: '03',
+    hoverBorder: 'hover:border-pink-400/40',
+    glow: 'rgba(244,114,182,0.25)',
+  },
+  booking: {
+    hoverBorder: 'hover:border-orange-400/40',
+    glow: 'rgba(251,146,60,0.25)',
+  },
+  finance: {
+    hoverBorder: 'hover:border-teal-300/40',
+    glow: 'rgba(94,234,212,0.24)',
   },
 };
 
-export function ProjectsSection({
-  motionProfile,
-  onSelectProject,
-}: ProjectsSectionProps) {
-  const [activeFilter, setActiveFilter] = useState<ProjectFocusFilter>('all');
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
-  const sectionRef = useRef<HTMLElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const reduced = motionProfile.tier === 'reduced';
+const LIVE_BUTTON_CLASS =
+  'inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] px-3.5 py-2 text-[13px] font-semibold text-slate-200 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500';
 
-  const visibleProjects = useMemo(
-    () => filterProjectsByFocus(PROJECTS, activeFilter),
-    [activeFilter]
-  );
+/**
+ * Grid placement for card `i` of `n` on a 4-track (md) / 6-track (lg) grid where every card
+ * spans 2 tracks, so a short last row sits centred instead of leaving a gap on the right.
+ */
+function centredPlacement(i: number, n: number): string {
+  const cls = ['md:col-span-2'];
+  if (n % 2 === 1 && i === n - 1) cls.push('md:col-start-2');
+  if (n % 3 === 1 && i === n - 1) cls.push('lg:col-start-3');
+  else if (n % 3 === 2 && i === n - 2) cls.push('lg:col-start-2');
+  else cls.push('lg:col-start-auto');
+  return cls.join(' ');
+}
 
-  useEffect(() => {
-    if (reduced || !listRef.current) return;
+// Tech tags shown per card; the rest collapse into a "+N" tag (full list in the case study)
+const MAX_CHIPS = 4;
 
-    const ctx = gsap.context(() => {
-      const revealCards = () => {
-        gsap.fromTo(
-          '.project-card-item',
-          { y: 26, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: MOTION_DURATIONS.complex,
-            stagger: 0.1 * motionProfile.staggerScale,
-            ease: MOTION_EASINGS.power3Out,
-            clearProps: 'transform,opacity',
-          }
-        );
+interface ProjectShowcaseProps {
+  project: ProjectItem;
+  /** Position in the full project list (drives the 01/02/03 numbering) */
+  number: number;
+  imgBroken: boolean;
+  tiltEnabled: boolean;
+  onImageError: () => void;
+  onOpen: () => void;
+}
 
-        gsap.fromTo(
-          '.project-image-frame',
-          { clipPath: 'inset(6% 0% 6% 0%)' },
-          {
-            clipPath: 'inset(0% 0% 0% 0%)',
-            duration: MOTION_DURATIONS.cinematic,
-            stagger: 0.12 * motionProfile.staggerScale,
-            ease: MOTION_EASINGS.expoOut,
-            clearProps: 'clipPath',
-          }
-        );
-      };
-
-      const el = listRef.current;
-      if (!el) return;
-
-      if (el.getBoundingClientRect().top <= window.innerHeight * 0.96) {
-        revealCards();
-        return;
-      }
-
-      gsap.set('.project-card-item', { y: 26, opacity: 0 });
-      const io = new IntersectionObserver(
-        (entries) => {
-          if (entries.some((e) => e.isIntersecting || e.boundingClientRect.top <= window.innerHeight)) {
-            revealCards();
-            io.disconnect();
-          }
-        },
-        { threshold: 0.04 }
-      );
-      io.observe(el);
-
-      return () => io.disconnect();
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, [reduced, motionProfile.staggerScale, activeFilter]);
-
-  const featuredProject = visibleProjects[0] ?? null;
-  const secondaryProjects = visibleProjects.slice(1);
+function ProjectShowcase({
+  project,
+  number,
+  imgBroken,
+  tiltEnabled,
+  onImageError,
+  onOpen,
+}: ProjectShowcaseProps) {
+  const accent = PROJECT_ACCENTS[project.demoMode];
+  const label = String(number).padStart(2, '0');
 
   return (
-    <section
-      id="projects"
-      ref={sectionRef}
-      className="relative border-t border-white/[0.06] py-24 lg:py-32"
+    <TiltCard
+      enabled={tiltEnabled}
+      maxTiltDeg={2}
+      cursorType="project"
+      className={`surface group relative h-full overflow-hidden rounded-[22px] border border-white/[0.08] transition-[transform,border-color] duration-300 ${accent.hoverBorder}`}
     >
-      <div className="mx-auto max-w-6xl px-6 lg:px-8">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-4">
-            <SectionHeader
-              kicker="01. Selected Work"
-              title="Full-stack applications designed from schema to interface."
-              reducedMotion={reduced}
-              titleClassName="max-w-2xl"
-            />
-            <p className="max-w-xl text-sm sm:text-[15px] leading-relaxed text-slate-400">
-              End-to-end web systems combining clean user interfaces, structured REST APIs,
-              and relational database architecture.
-            </p>
-          </div>
+      {/* Accent glow along the top edge */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 -top-px h-px opacity-60 transition-opacity duration-500 group-hover:opacity-100"
+        style={{ background: `linear-gradient(90deg, transparent, ${accent.glow}, transparent)` }}
+      />
 
-          {/* Project Filter Segmented Control */}
-          <div
-            role="tablist"
-            aria-label="Filter projects by engineering focus"
-            className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#0D1017] p-1 self-start lg:self-auto shrink-0"
+      <div className="flex h-full flex-col">
+        {/* ---------- Screenshot in a browser frame ---------- */}
+        <div className="p-2 sm:p-2.5">
+          <motion.div
+            layoutId={`project-media-${project.id}`}
+            transition={{ duration: 0.55, ease: REVEAL_EASE }}
+            className="force-dark relative overflow-hidden rounded-[16px] bg-canvas ring-1 ring-white/[0.07]"
           >
-            {PROJECT_FILTERS.map((filter) => {
-              const active = activeFilter === filter.id;
-              return (
+            <div className="flex items-center gap-3 border-b border-white/[0.06] bg-white/[0.03] px-3.5 py-2">
+              <div className="flex gap-1.5" aria-hidden="true">
+                <span className="h-2 w-2 rounded-full bg-white/15" />
+                <span className="h-2 w-2 rounded-full bg-white/15" />
+                <span className="h-2 w-2 rounded-full bg-white/15" />
+              </div>
+            </div>
+
+            <div className="relative aspect-[16/9]">
+              <ImageReveal className="absolute inset-0">
+                {!imgBroken ? (
+                  <img
+                    src={project.imageUrl}
+                    alt={project.imageAlt}
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
+                    onError={onImageError}
+                    className="h-full w-full object-cover transition-[scale,translate] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06] [translate:calc(var(--tilt-x,0)*-14px)_calc(var(--tilt-y,0)*-14px)]"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-surface-2 via-[#131A29] to-canvas p-8 text-center">
+                    <Layers className="h-10 w-10 text-brand-500" aria-hidden="true" />
+                    <span className="font-display text-lg font-semibold text-white">{project.title}</span>
+                  </div>
+                )}
+              </ImageReveal>
+
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-40 transition-opacity duration-500 group-hover:opacity-100"
+              />
+
+              {/* Whole screenshot opens the case study */}
+              <button
+                type="button"
+                aria-label={`Open ${project.title} details`}
+                onClick={() => onOpen()}
+                data-cursor="project"
+                className="absolute inset-0 z-[1] focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-brand-500"
+              />
+
+              {/* Interactive preview actions, revealed on hover */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] hidden translate-y-3 justify-center gap-2 p-4 opacity-0 transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0 group-hover:opacity-100 md:flex">
                 <button
-                  key={filter.id}
-                  role="tab"
                   type="button"
-                  aria-selected={active}
-                  onClick={() => setActiveFilter(filter.id)}
-                  className={`rounded-lg px-3.5 py-2 text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${
-                    active
-                      ? 'bg-[#2563EB] text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  onClick={() => onOpen()}
+                  tabIndex={-1}
+                  className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md transition-transform duration-300 hover:scale-105"
                 >
-                  {filter.label}
+                  <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                  Details
                 </button>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
-        {/* Featured Project + 2-Column Desktop Grid */}
-        <div ref={listRef} className="projects-list mt-12 space-y-8">
-          {featuredProject && (() => {
-            const imgBroken = failedImages[featuredProject.id];
-            const accent = PROJECT_ACCENTS[featuredProject.demoMode];
+        {/* ---------- Project info ---------- */}
+        <div className="relative flex flex-1 flex-col p-5 sm:p-6">
+          {/* Outlined index number */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-5 top-4 select-none font-display text-[2.5rem] font-bold leading-[0.85] tracking-[-0.06em] text-transparent transition-[-webkit-text-stroke-color] duration-500 [-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-white)_16%,transparent)] group-hover:[-webkit-text-stroke-color:var(--color-brand-400)] sm:right-6 sm:top-5 sm:text-[2.75rem]"
+          >
+            {label}
+          </span>
 
-            return (
-              <div key={featuredProject.id} className="project-card-item">
-                <TiltCard
-                  enabled={motionProfile.enable3DTilt}
-                  maxTiltDeg={3}
-                  cursorType="project"
-                  cursorLabel="View Project"
-                  className={`group relative rounded-2xl border border-white/[0.09] bg-[#0D1017] overflow-hidden transition-colors duration-300 ${accent.hoverBorder}`}
+          <h3 className="pr-[4.75rem] font-display text-[1.3rem] font-semibold leading-[1.2] tracking-[-0.03em] text-white sm:text-[1.4rem]">
+            <button
+              type="button"
+              onClick={() => onOpen()}
+              className="text-left transition-colors hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+            >
+              {project.title}
+            </button>
+          </h3>
+
+          <p className="mt-2.5 text-sm leading-relaxed text-slate-400">{project.shortDescription}</p>
+
+          <ul aria-label="Technology stack" className="mt-4 flex flex-wrap gap-1.5">
+            {project.stack.slice(0, MAX_CHIPS).map((tech) => (
+              <TechChip key={tech} label={tech} />
+            ))}
+            {project.stack.length > MAX_CHIPS && (
+              <li
+                title={project.stack.slice(MAX_CHIPS).join(', ')}
+                className="inline-flex items-center rounded-full bg-white/[0.045] px-2.5 py-1 text-xs text-slate-400 ring-1 ring-inset ring-white/[0.06]"
+              >
+                +{project.stack.length - MAX_CHIPS}
+              </li>
+            )}
+          </ul>
+
+          <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
+            <button
+              type="button"
+              onClick={onOpen}
+              className="force-dark btn-sheen inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-600 to-brand-accent px-4 py-2 text-[13px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_-10px_color-mix(in_srgb,var(--color-brand-600)_70%,transparent)] transition-[filter] duration-300 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+            >
+              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+              View Details
+            </button>
+
+            {project.liveUrl ? (
+              <a
+                href={project.liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-cursor="link"
+                className={`group/live ${LIVE_BUTTON_CLASS} hover:border-white/25 hover:bg-white/[0.07]`}
+              >
+                <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                Live Demo
+                <ArrowUpRight
+                  className="h-3.5 w-3.5 text-slate-500 transition-transform duration-300 group-hover/live:-translate-y-0.5 group-hover/live:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </a>
+            ) : (
+              // No deployment yet: same button, disabled, with a "Coming soon" tooltip
+              <span className="group/live relative">
+                <button
+                  type="button"
+                  aria-disabled="true"
+                  aria-label="Live demo coming soon"
+                  className={`${LIVE_BUTTON_CLASS} cursor-not-allowed opacity-60`}
                 >
-                  <div
-                    aria-hidden="true"
-                    className={`absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r ${accent.topBar} opacity-75`}
-                  />
+                  <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                  Live Demo
+                </button>
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-md bg-surface-raised px-2.5 py-1 text-[11px] font-medium text-slate-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-[opacity,translate] duration-200 group-hover/live:translate-y-0 group-hover/live:opacity-100 group-focus-within/live:translate-y-0 group-focus-within/live:opacity-100"
+                >
+                  Coming soon
+                </span>
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </TiltCard>
+  );
+}
 
-                  <div className="grid grid-cols-1 lg:grid-cols-12 lg:items-stretch">
-                    {/* Featured Media Column */}
-                    <div className="project-image-frame lg:col-span-7 relative overflow-hidden bg-[#06070A] aspect-[16/10] lg:aspect-auto lg:min-h-[410px]">
-                      <button
-                        type="button"
-                        aria-label={`Open details and interactive demo for ${featuredProject.title}`}
-                        onClick={() => onSelectProject(featuredProject)}
-                        data-cursor="project"
-                        data-cursor-label="View Project"
-                        className="block h-full w-full text-left focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#3B82F6]"
-                      >
-                        {!imgBroken ? (
-                          <img
-                            src={featuredProject.imageUrl}
-                            alt={featuredProject.imageAlt}
-                            referrerPolicy="no-referrer"
-                            loading="lazy"
-                            onError={() =>
-                              setFailedImages((prev) => ({
-                                ...prev,
-                                [featuredProject.id]: true,
-                              }))
-                            }
-                            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#0D1017] via-[#131A29] to-[#06070A] p-8 text-center">
-                            <Layers className="h-10 w-10 text-[#3B82F6]" aria-hidden="true" />
-                            <span className="font-display text-lg font-semibold text-white">
-                              {featuredProject.title}
-                            </span>
-                          </div>
-                        )}
-                        <div
-                          aria-hidden="true"
-                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#06070A]/80 via-transparent to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-60"
-                        />
-                        <div
-                          aria-hidden="true"
-                          className="pointer-events-none absolute top-4 left-4 rounded-lg border border-white/10 bg-[#06070A]/80 px-2.5 py-1 font-mono text-[11px] text-slate-300 tabular-nums backdrop-blur-sm"
-                        >
-                          {accent.indexLabel} / 03 · Featured
-                        </div>
-                      </button>
-                    </div>
+export function ProjectsSection({ motionProfile, onSelectProject }: ProjectsSectionProps) {
+  const [activeFilter, setActiveFilter] = useState<ProjectFocusFilter>('all');
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const reduced = motionProfile.tier === 'reduced';
 
-                    {/* Featured Information Column */}
-                    <div className="lg:col-span-5 flex flex-col justify-between p-6 sm:p-8 lg:p-10">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-                          <span className={accent.labelClass}>{featuredProject.categoryLabel}</span>
-                          <span aria-hidden="true">·</span>
-                          <span className="tabular-nums">{featuredProject.year}</span>
-                        </div>
+  const visibleProjects = useMemo(() => filterProjectsByFocus(PROJECTS, activeFilter), [activeFilter]);
+  const counts = useMemo(
+    () => Object.fromEntries(PROJECT_FILTERS.map((f) => [f.id, filterProjectsByFocus(PROJECTS, f.id).length])),
+    []
+  );
 
-                        <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white">
-                          {featuredProject.title}
-                        </h3>
+  return (
+    <section id="projects" className="relative py-20 sm:py-24 lg:py-32">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <SectionHeader
+            kicker="01. Selected Work"
+            badge={<SectionBadge3D src={PROFILE.workIllustration} width={640} height={531} reducedMotion={reduced} />}
+            title="Full-stack apps, from schema to interface."
+            accent="schema to interface."
+            reducedMotion={reduced}
+            titleClassName="max-w-3xl"
+          />
 
-                        <p className="text-xs font-mono text-slate-400">
-                          Role: <span className="text-slate-200">{featuredProject.roleSummary}</span>
-                        </p>
-
-                        <p className="text-sm sm:text-[15px] leading-relaxed text-slate-300">
-                          {featuredProject.shortDescription}
-                        </p>
-
-                        <ul className="space-y-2 pt-2 text-xs leading-relaxed text-slate-400">
-                          {featuredProject.features.slice(0, 3).map((feature) => (
-                            <li key={feature} className="flex items-start gap-2">
-                              <span
-                                aria-hidden="true"
-                                className="mt-1.5 h-1 w-1 rounded-full bg-[#3B82F6] shrink-0"
-                              />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="mt-8 space-y-5 border-t border-white/[0.08] pt-5">
-                        <p className="font-mono text-xs text-slate-400">
-                          {featuredProject.stack.join(' · ')}
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => onSelectProject(featuredProject)}
-                            className="group/btn inline-flex items-center gap-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 text-xs font-semibold text-white whitespace-nowrap shrink-0 transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
-                          >
-                            <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                            <span>Live Demo &amp; Case Study</span>
-                          </button>
-
-                          <a
-                            href={featuredProject.githubUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            data-cursor="link"
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.02] hover:bg-white/[0.08] px-4 py-2.5 text-xs font-semibold text-slate-200 whitespace-nowrap shrink-0 transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
-                          >
-                            <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-                            <span>GitHub</span>
-                            <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TiltCard>
-              </div>
-            );
-          })()}
-
-          {secondaryProjects.length > 0 && (
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-              {secondaryProjects.map((project) => {
-                const imgBroken = failedImages[project.id];
-                const accent = PROJECT_ACCENTS[project.demoMode];
-
+          {/* Category filters */}
+          <Reveal delay={0.25} distance={16} className="self-start lg:self-auto shrink-0">
+            <div
+              role="tablist"
+              aria-label="Filter projects by category"
+              className="flex items-center gap-0.5 rounded-full border border-white/[0.08] bg-white/[0.02] p-1 backdrop-blur-sm"
+            >
+              {PROJECT_FILTERS.map((filter) => {
+                const active = activeFilter === filter.id;
                 return (
-                  <div key={project.id} className="project-card-item h-full">
-                    <TiltCard
-                      enabled={motionProfile.enable3DTilt}
-                      maxTiltDeg={3}
-                      cursorType="project"
-                      cursorLabel="View Project"
-                      className={`group relative flex h-full flex-col rounded-2xl border border-white/[0.09] bg-[#0D1017] overflow-hidden transition-colors duration-300 ${accent.hoverBorder}`}
-                    >
-                      <div
-                        aria-hidden="true"
-                        className={`absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r ${accent.topBar} opacity-75`}
+                  <button
+                    key={filter.id}
+                    role="tab"
+                    type="button"
+                    aria-selected={active}
+                    onClick={() => setActiveFilter(filter.id)}
+                    className={`relative inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-brand-500 sm:px-4 ${
+                      active ? 'text-canvas' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="project-filter-pill"
+                        transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 34 }}
+                        className="absolute inset-0 rounded-full bg-white"
                       />
-
-                      {/* 16:10 Project Visual */}
-                      <div className="project-image-frame relative overflow-hidden bg-[#06070A] aspect-[16/10]">
-                        <button
-                          type="button"
-                          aria-label={`Open details and interactive demo for ${project.title}`}
-                          onClick={() => onSelectProject(project)}
-                          data-cursor="project"
-                          data-cursor-label="View Project"
-                          className="block h-full w-full text-left focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#3B82F6]"
-                        >
-                          {!imgBroken ? (
-                            <img
-                              src={project.imageUrl}
-                              alt={project.imageAlt}
-                              referrerPolicy="no-referrer"
-                              loading="lazy"
-                              onError={() =>
-                                setFailedImages((prev) => ({
-                                  ...prev,
-                                  [project.id]: true,
-                                }))
-                              }
-                              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#0D1017] via-[#131A29] to-[#06070A] p-8 text-center">
-                              <Layers className="h-10 w-10 text-[#3B82F6]" aria-hidden="true" />
-                              <span className="font-display text-lg font-semibold text-white">
-                                {project.title}
-                              </span>
-                            </div>
-                          )}
-                          <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#06070A]/80 via-transparent to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-60"
-                          />
-                          <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute top-4 left-4 rounded-lg border border-white/10 bg-[#06070A]/80 px-2.5 py-1 font-mono text-[11px] text-slate-300 tabular-nums backdrop-blur-sm"
-                          >
-                            {accent.indexLabel} / 03
-                          </div>
-                        </button>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="flex flex-1 flex-col justify-between p-6 sm:p-8">
-                        <div className="space-y-3.5">
-                          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-                            <span className={accent.labelClass}>{project.categoryLabel}</span>
-                            <span aria-hidden="true">·</span>
-                            <span className="tabular-nums">{project.year}</span>
-                          </div>
-
-                          <h3 className="font-display text-2xl font-bold tracking-tight text-white">
-                            {project.title}
-                          </h3>
-
-                          <p className="text-xs font-mono text-slate-400">
-                            Role: <span className="text-slate-200">{project.roleSummary}</span>
-                          </p>
-
-                          <p className="text-sm leading-relaxed text-slate-300">
-                            {project.shortDescription}
-                          </p>
-
-                          <ul className="space-y-1.5 pt-1 text-xs leading-relaxed text-slate-400">
-                            {project.features.slice(0, 2).map((feature) => (
-                              <li key={feature} className="flex items-start gap-2">
-                                <span
-                                  aria-hidden="true"
-                                  className="mt-1.5 h-1 w-1 rounded-full bg-[#3B82F6] shrink-0"
-                                />
-                                <span>{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div className="mt-7 space-y-5 border-t border-white/[0.08] pt-5">
-                          <p className="font-mono text-xs text-slate-400">
-                            {project.stack.join(' · ')}
-                          </p>
-
-                          <div className="flex flex-wrap items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => onSelectProject(project)}
-                              className="group/btn inline-flex items-center gap-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 text-xs font-semibold text-white whitespace-nowrap shrink-0 transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
-                            >
-                              <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                              <span>Live Demo &amp; Case Study</span>
-                            </button>
-
-                            <a
-                              href={project.githubUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              data-cursor="link"
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.02] hover:bg-white/[0.08] px-4 py-2.5 text-xs font-semibold text-slate-200 whitespace-nowrap shrink-0 transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
-                            >
-                              <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-                              <span>GitHub</span>
-                              <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </TiltCard>
-                  </div>
+                    )}
+                    <span className="relative">{filter.label}</span>
+                    <span className={`relative text-[10px] tabular-nums ${active ? 'text-canvas/60' : 'text-slate-600'}`}>
+                      {counts[filter.id]}
+                    </span>
+                  </button>
                 );
               })}
             </div>
-          )}
+          </Reveal>
+        </div>
+
+        {/* Showcase grid (3 per row, short last row centred): cards fade out / reflow when the filter changes */}
+        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-4 lg:grid-cols-6">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {visibleProjects.map((project, i) => (
+              <motion.div
+                key={project.id}
+                className={`h-full ${centredPlacement(i, visibleProjects.length)}`}
+                layout={!reduced}
+                initial={{ opacity: 0, y: reduced ? 0 : 48 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ ...REVEAL_VIEWPORT, amount: 0.15 }}
+                exit={{ opacity: 0, scale: reduced ? 1 : 0.96, transition: { duration: 0.25 } }}
+                transition={{ duration: reduced ? 0.3 : 0.9, ease: REVEAL_EASE }}
+              >
+                <ProjectShowcase
+                  project={project}
+                  number={PROJECTS.indexOf(project) + 1}
+                  imgBroken={Boolean(failedImages[project.id])}
+                  tiltEnabled={motionProfile.enable3DTilt}
+                  onImageError={() => setFailedImages((prev) => ({ ...prev, [project.id]: true }))}
+                  onOpen={() => onSelectProject(project)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
     </section>

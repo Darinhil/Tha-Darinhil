@@ -18,20 +18,35 @@ import { ProjectsSection } from './components/sections/ProjectsSection';
 import { ServicesSection } from './components/sections/ServicesSection';
 import { SkillsSection } from './components/sections/SkillsSection';
 import { TimelineSection } from './components/sections/TimelineSection';
+import { WELCOME_SEEN_KEY, WelcomeScreen } from './components/welcome/WelcomeScreen';
 import { useLenisScroll } from './hooks/useLenisScroll';
 import { useMotionProfile } from './hooks/useMotionProfile';
 import type { ProjectItem } from './lib/portfolioUtils';
 
 gsap.registerPlugin(ScrollTrigger);
 
+/** Show the terminal welcome once per browser session (skip with ?autostart=1). */
+function shouldShowWelcome(): boolean {
+  if (new URLSearchParams(window.location.search).get('autostart') === '1') return false;
+  try {
+    return window.sessionStorage.getItem(WELCOME_SEEN_KEY) !== '1';
+  } catch {
+    return true;
+  }
+}
+
 export default function App() {
   const motionProfile = useMotionProfile();
   const reducedMotion = motionProfile.tier === 'reduced';
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+
   const mainRef = useRef<HTMLElement>(null);
+  const [welcomeOpen, setWelcomeOpen] = useState(shouldShowWelcome);
+  // The hero entrance plays as the welcome screen starts closing
+  const [heroReady, setHeroReady] = useState(() => !welcomeOpen);
 
   const lenisRef = useLenisScroll(
-    !reducedMotion && motionProfile.tier !== 'mobile' && !selectedProject
+    !reducedMotion && motionProfile.tier !== 'mobile' && !selectedProject && !welcomeOpen
   );
 
   useEffect(() => {
@@ -50,6 +65,21 @@ export default function App() {
       if (rafId) window.cancelAnimationFrame(rafId);
     };
   }, []);
+
+  // Feed pointer position to `.spotlight` cards for the cursor-following glow
+  useEffect(() => {
+    if (reducedMotion) return;
+    const handlePointerMove = (e: PointerEvent) => {
+      const target = e.target instanceof Element ? e.target : null;
+      const card = target?.closest<HTMLElement>('.spotlight');
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+      card.style.setProperty('--my', `${e.clientY - rect.top}px`);
+    };
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    return () => window.removeEventListener('pointermove', handlePointerMove);
+  }, [reducedMotion]);
 
   const handleNavigate = useCallback(
     (sectionId: string) => {
@@ -70,21 +100,23 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="relative min-h-screen bg-[#06070A] text-[#F4F6F9]">
-        {/* Very light ambient grain texture */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-0 z-30 opacity-[0.025] bg-grain-texture"
-        />
-
+      <div className="relative min-h-screen bg-canvas text-ink">
         <CustomCursor enabled={motionProfile.enableCustomCursor && !selectedProject} />
         <ScrollProgress />
+
+        {welcomeOpen && (
+          <WelcomeScreen
+            reducedMotion={reducedMotion}
+            onExitStart={() => setHeroReady(true)}
+            onExitComplete={() => setWelcomeOpen(false)}
+          />
+        )}
 
         <Navbar reducedMotion={reducedMotion} onNavigate={handleNavigate} />
 
         <main ref={mainRef}>
           <HeroSection
-            ready
+            ready={heroReady}
             motionProfile={motionProfile}
             onNavigate={handleNavigate}
           />

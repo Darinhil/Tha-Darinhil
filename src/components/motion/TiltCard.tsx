@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { calculateTiltTransform } from '../../lib/motionConfig';
 
 interface TiltCardProps {
@@ -53,9 +53,12 @@ export function TiltCard({
       className={`relative transition-transform duration-300 ease-out will-change-transform ${className}`}
       style={
         enabled
-          ? {
+          ? ({
               transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`,
-            }
+              // Pointer position (-1..1) for children that add depth, e.g. counter-moving media
+              '--tilt-x': ((tilt.glareX - 50) / 50).toFixed(3),
+              '--tilt-y': ((tilt.glareY - 50) / 50).toFixed(3),
+            } as CSSProperties)
           : undefined
       }
     >
@@ -65,7 +68,7 @@ export function TiltCard({
           className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300"
           style={{
             opacity: hovered ? 1 : 0,
-            background: `radial-gradient(420px circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(59, 130, 246, 0.12), transparent 60%)`,
+            background: `radial-gradient(420px circle at ${tilt.glareX}% ${tilt.glareY}%, color-mix(in srgb, var(--color-brand-500) 12%, transparent), transparent 60%)`,
           }}
         />
       )}

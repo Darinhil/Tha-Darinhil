@@ -1,79 +1,137 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import {
-  Braces,
-  Code2,
-  Cpu,
-  Database,
-  GitBranch,
-  Globe,
-  Layers,
-  LayoutGrid,
-  Network,
-  Server,
-  Terminal,
-  Wrench,
-} from 'lucide-react';
-import { SKILLS } from '../../data/portfolioData';
+import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Code2, Database, LayoutGrid, Network, Server, Wrench } from 'lucide-react';
+import { PROFILE, SKILLS } from '../../data/portfolioData';
 import { MOTION_EASINGS, type ResponsiveMotionProfile } from '../../lib/motionConfig';
 import {
   filterSkillsByCategory,
   type SkillCategory,
   type SkillItem,
 } from '../../lib/portfolioUtils';
+import { brandColorForMode, getBrandIcon } from '../../lib/techIcons';
+import { REVEAL_VIEWPORT, StaggerItem } from '../motion/Reveal';
 import { SectionHeader } from '../motion/SectionHeader';
-import { TiltCard } from '../motion/TiltCard';
+import { IconTile } from '../ui/IconTile';
+import { SectionBadge3D } from '../ui/SectionBadge3D';
+import { TechIcon } from '../ui/TechIcon';
+
+function brandColor(skillId: string): string {
+  const brand = getBrandIcon(skillId);
+  return brand ? brandColorForMode(brand.hex) : 'var(--color-brand-400)';
+}
 
 interface SkillsSectionProps {
   motionProfile: ResponsiveMotionProfile;
 }
 
+type SkillGroup = SkillItem['category'];
+
 const CATEGORY_TABS: { id: SkillCategory; label: string }[] = [
-  { id: 'all', label: 'All Technologies' },
+  { id: 'all', label: 'All' },
   { id: 'frontend', label: 'Frontend' },
   { id: 'backend', label: 'Backend' },
   { id: 'database', label: 'Database' },
   { id: 'tools', label: 'Tools' },
 ];
 
-const CATEGORY_ICONS: Record<SkillItem['category'], typeof Code2> = {
-  frontend: LayoutGrid,
-  backend: Server,
-  database: Database,
-  tools: Wrench,
+const CATEGORY_META: Record<SkillGroup, { label: string; icon: typeof Code2 }> = {
+  frontend: { label: 'Frontend', icon: LayoutGrid },
+  backend: { label: 'Backend', icon: Server },
+  database: { label: 'Database', icon: Database },
+  tools: { label: 'Tools', icon: Wrench },
 };
 
-const SKILL_ICON_MAP: Record<string, typeof Code2> = {
-  html5: Globe,
-  css3: Layers,
-  javascript: Braces,
-  typescript: Code2,
-  vuejs: Layers,
-  reactjs: Cpu,
-  tailwind: LayoutGrid,
-  bootstrap: LayoutGrid,
-  php: Server,
-  laravel: Server,
-  nodejs: Terminal,
-  expressjs: Network,
-  'rest-apis': Network,
-  mysql: Database,
-  postgresql: Database,
-  sqlite: Database,
-  git: GitBranch,
-  github: GitBranch,
-  gitlab: GitBranch,
-  postman: Network,
-  figma: Layers,
-  docker: Cpu,
-  vscode: Terminal,
-};
+interface SkillPanelProps {
+  group: SkillGroup;
+  skills: SkillItem[];
+  wide?: boolean;
+  className?: string;
+}
+
+// Springy "pop" easing for the logo tile (slight overshoot)
+const POP = 'ease-[cubic-bezier(0.34,1.56,0.64,1)]';
+
+function SkillPanel({ group, skills, wide = false, className = '' }: SkillPanelProps) {
+  const meta = CATEGORY_META[group];
+  const GroupIcon = meta.icon;
+  const reduce = useReducedMotion();
+  const hoverPillId = useId();
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  return (
+    <div
+      className={`group/panel surface spotlight flex flex-col rounded-[22px] border border-white/[0.08] transition-[border-color] duration-500 hover:border-white/[0.14] ${className}`}
+    >
+      <div className="flex items-center justify-between gap-3 px-6 pt-6 pb-3">
+        <div className="flex items-center gap-3">
+          <IconTile
+            size="md"
+            tone="accent"
+            className={`transition-[rotate,scale] duration-500 ${POP} group-hover/panel:-rotate-6 group-hover/panel:scale-110`}
+          >
+            <GroupIcon strokeWidth={1.75} />
+          </IconTile>
+          <h3 className="font-display text-base font-semibold tracking-tight text-white">{meta.label}</h3>
+        </div>
+        <span className="rounded-full bg-white/[0.04] px-2 py-0.5 text-xs text-slate-500 tabular-nums transition-colors duration-300 group-hover/panel:bg-brand-500/15 group-hover/panel:text-brand-300">
+          {skills.length}
+        </span>
+      </div>
+
+      <ul
+        onMouseLeave={() => setHoveredId(null)}
+        className={`grid grid-cols-2 gap-x-4 px-5 pb-3 sm:px-6 ${wide ? 'lg:grid-cols-3 sm:gap-x-10' : 'sm:gap-x-10 lg:grid-cols-1'}`}
+      >
+        {skills.map((skill) => {
+          const hovered = hoveredId === skill.id;
+          return (
+            <li
+              key={skill.id}
+              onMouseEnter={() => setHoveredId(skill.id)}
+              style={{ '--brand': brandColor(skill.id) } as CSSProperties}
+              title={skill.summary}
+              className="group/skill relative flex min-w-0 items-center gap-2.5 border-t border-white/[0.06] py-3 sm:gap-3.5"
+            >
+              {/* Highlight that glides between rows (shared layout animation) */}
+              {hovered && (
+                <motion.span
+                  layoutId={`skill-hover-${hoverPillId}`}
+                  aria-hidden="true"
+                  transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+                  className="pointer-events-none absolute -inset-x-3 inset-y-1 rounded-xl bg-[color-mix(in_srgb,var(--brand)_7%,transparent)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--brand)_22%,transparent)]"
+                >
+                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[var(--brand)] shadow-[0_0_10px_var(--brand)]" />
+                </motion.span>
+              )}
+
+              <span
+                aria-hidden="true"
+                className={`relative flex h-8 w-8 shrink-0 sm:h-9 sm:w-9 items-center justify-center rounded-[10px] bg-white/[0.04] ring-1 ring-inset ring-white/[0.07] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-[scale,rotate,background-color,box-shadow] duration-500 ${POP} group-hover/skill:scale-115 group-hover/skill:-rotate-8 group-hover/skill:bg-[color-mix(in_srgb,var(--brand)_16%,transparent)] group-hover/skill:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] group-hover/skill:shadow-[0_8px_22px_-6px_color-mix(in_srgb,var(--brand)_70%,transparent)]`}
+              >
+                <TechIcon name={skill.id} colored className="h-[18px] w-[18px]" />
+              </span>
+              <div className="relative min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <span className="truncate text-sm font-medium text-slate-100 transition-[translate,color] duration-300 group-hover/skill:translate-x-1 group-hover/skill:text-white sm:text-[15px]">
+                    {skill.name}
+                  </span>
+                  <span className="hidden text-xs text-slate-500 transition-colors duration-300 group-hover/skill:text-brand-300 sm:inline">
+                    {skill.role}
+                  </span>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 export function SkillsSection({ motionProfile }: SkillsSectionProps) {
   const [activeCategory, setActiveCategory] = useState<SkillCategory>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'constellation'>('grid');
   const [selectedSkill, setSelectedSkill] = useState<SkillItem>(SKILLS[4]);
-  const gridRef = useRef<HTMLDivElement>(null);
 
   const reduced = motionProfile.tier === 'reduced';
 
@@ -81,6 +139,12 @@ export function SkillsSection({ motionProfile }: SkillsSectionProps) {
     () => filterSkillsByCategory(SKILLS, activeCategory),
     [activeCategory]
   );
+
+  const skillsByGroup = useMemo(() => {
+    const groups: Record<SkillGroup, SkillItem[]> = { frontend: [], backend: [], database: [], tools: [] };
+    for (const skill of SKILLS) groups[skill.category].push(skill);
+    return groups;
+  }, []);
 
   useEffect(() => {
     if (!filteredSkills.some((s) => s.id === selectedSkill.id) && filteredSkills[0]) {
@@ -101,146 +165,136 @@ export function SkillsSection({ motionProfile }: SkillsSectionProps) {
     });
   }, [filteredSkills]);
 
-  return (
-    <section
-      id="skills"
-      className="relative border-t border-white/[0.06] py-24 lg:py-32"
-    >
-      <div className="mx-auto max-w-6xl px-6 lg:px-8">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <SectionHeader
-            kicker="03. Technical Expertise"
-            title="Tools & technologies across the full stack."
-            reducedMotion={reduced}
-            titleClassName="max-w-xl"
-          />
+  const panelTransition = {
+    duration: reduced ? 0 : 0.5,
+    ease: MOTION_EASINGS.appleEase,
+  };
 
-          {/* Interactive View Switcher (Grid vs Constellation) */}
-          <div className="flex items-center gap-2 self-start lg:self-auto rounded-xl border border-white/10 bg-[#0D1017] p-1">
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              aria-pressed={viewMode === 'grid'}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-[#2563EB] text-white'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Card Grid</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('constellation')}
-              aria-pressed={viewMode === 'constellation'}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-colors ${
-                viewMode === 'constellation'
-                  ? 'bg-[#2563EB] text-white'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Network className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Constellation</span>
-            </button>
+  return (
+    <section id="skills" className="relative py-20 sm:py-24 lg:py-32">
+      <div aria-hidden="true" className="section-rule" />
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <SectionHeader
+              kicker="03. Technical Expertise"
+              badge={<SectionBadge3D src={PROFILE.skillsIllustration} width={640} height={589} reducedMotion={reduced} />}
+              title="Tools across the full stack."
+              accent="full stack."
+              reducedMotion={reduced}
+              titleClassName="max-w-xl"
+            />
+          </div>
+
+          {/* Interactive View Switcher (Overview vs Constellation) */}
+          <div className="flex items-center gap-0.5 self-start lg:self-auto rounded-full border border-white/[0.08] bg-white/[0.02] p-1">
+            {(
+              [
+                { id: 'grid', label: 'Overview', icon: LayoutGrid },
+                { id: 'constellation', label: 'Constellation', icon: Network },
+              ] as const
+            ).map((mode) => {
+              const active = viewMode === mode.id;
+              const ModeIcon = mode.icon;
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setViewMode(mode.id)}
+                  aria-pressed={active}
+                  className={`relative inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium whitespace-nowrap transition-colors ${
+                    active ? 'text-canvas' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="skills-view-pill"
+                      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 34 }}
+                      className="absolute inset-0 rounded-full bg-white"
+                    />
+                  )}
+                  <ModeIcon className="relative h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="relative">{mode.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Category Filter Tabs */}
-        <div
-          role="tablist"
-          aria-label="Filter technologies by category"
-          className="mt-10 flex flex-wrap items-center gap-2 border-b border-white/[0.08] pb-4"
-        >
-          {CATEGORY_TABS.map((tab) => {
-            const active = activeCategory === tab.id;
-            return (
-              <button
-                key={tab.id}
-                role="tab"
-                type="button"
-                aria-selected={active}
-                onClick={() => setActiveCategory(tab.id)}
-                className={`relative rounded-lg px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6] ${
-                  active
-                    ? 'text-white'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
-                }`}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="skills-active-tab"
-                    transition={{
-                      duration: reduced ? 0 : 0.28,
-                      ease: MOTION_EASINGS.appleEase,
-                    }}
-                    className="absolute inset-0 rounded-lg bg-[#161E2E] border border-[#3B82F6]/45"
-                  />
-                )}
-                <span className="relative z-10">{tab.label}</span>
-              </button>
-            );
-          })}
-          <span className="ml-auto hidden sm:inline-block font-mono text-xs text-slate-500 tabular-nums">
-            {filteredSkills.length} technologies
-          </span>
+        <div className="mt-12 flex flex-wrap items-center gap-3 border-b border-white/[0.07] pb-4">
+          <div role="tablist" aria-label="Filter technologies by category" className="flex flex-wrap items-center gap-1">
+            {CATEGORY_TABS.map((tab) => {
+              const active = activeCategory === tab.id;
+              const count = tab.id === 'all' ? SKILLS.length : skillsByGroup[tab.id].length;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  type="button"
+                  aria-selected={active}
+                  onClick={() => setActiveCategory(tab.id)}
+                  className={`relative inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-medium whitespace-nowrap shrink-0 transition-colors focus-visible:outline-2 focus-visible:outline-brand-500 ${
+                    active ? 'text-white' : 'text-slate-500 hover:text-slate-200'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="skills-active-tab"
+                      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 34 }}
+                      className="absolute inset-0 rounded-full bg-white/[0.07] ring-1 ring-inset ring-white/10"
+                    />
+                  )}
+                  <span className="relative z-10">{tab.label}</span>
+                  <span className="relative z-10 text-[11px] text-slate-500 tabular-nums">{count}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Grid View */}
         {viewMode === 'grid' ? (
-          <div
-            ref={gridRef}
-            className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredSkills.map((skill, idx) => {
-                const Icon = SKILL_ICON_MAP[skill.id] ?? CATEGORY_ICONS[skill.category];
-                return (
-                  <motion.div
-                    key={skill.id}
-                    layout={!reduced}
-                    initial={reduced ? false : { opacity: 0, y: 18, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-                    transition={{
-                      duration: reduced ? 0 : 0.35,
-                      delay: reduced ? 0 : Math.min(idx * 0.025, 0.25),
-                      ease: MOTION_EASINGS.appleEase,
-                    }}
-                  >
-                    <TiltCard
-                      enabled={motionProfile.enable3DTilt}
-                      maxTiltDeg={5}
-                      className="group h-full rounded-2xl border border-white/[0.08] bg-[#0D1017] p-5 transition-colors duration-200 hover:border-[#3B82F6]/45"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#06070A] text-[#60A5FA] transition-transform duration-200 group-hover:scale-105 group-hover:border-[#3B82F6]/40">
-                          <Icon className="h-4 w-4" aria-hidden="true" />
-                        </div>
-                        <span className="font-mono text-[11px] text-slate-500 capitalize">
-                          {skill.category}
-                        </span>
-                      </div>
-
-                      <h3 className="mt-4 font-display text-lg font-semibold text-white">
-                        {skill.name}
-                      </h3>
-                      <p className="mt-0.5 font-mono text-xs text-[#60A5FA]">
-                        {skill.role}
-                      </p>
-                      <p className="mt-2.5 text-xs leading-relaxed text-slate-400">
-                        {skill.summary}
-                      </p>
-                    </TiltCard>
-                  </motion.div>
-                );
-              })}
+          <div className="mt-8">
+            <AnimatePresence mode="wait" initial={false}>
+              {activeCategory === 'all' ? (
+                /* Bento overview: three balanced columns */
+                <motion.div
+                  key="all"
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ ...REVEAL_VIEWPORT, amount: 0.1 }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10, transition: panelTransition }}
+                  variants={{ hidden: {}, show: { transition: { staggerChildren: reduced ? 0 : 0.12 } } }}
+                  className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+                >
+                  <StaggerItem>
+                    <SkillPanel group="frontend" skills={skillsByGroup.frontend} className="h-full" />
+                  </StaggerItem>
+                  <StaggerItem className="flex flex-col gap-4">
+                    <SkillPanel group="backend" skills={skillsByGroup.backend} />
+                    <SkillPanel group="database" skills={skillsByGroup.database} className="flex-1" />
+                  </StaggerItem>
+                  <StaggerItem className="md:col-span-2 lg:col-span-1">
+                    <SkillPanel group="tools" skills={skillsByGroup.tools} className="h-full" />
+                  </StaggerItem>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={activeCategory}
+                  initial={reduced ? false : { opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }}
+                  transition={panelTransition}
+                >
+                  <SkillPanel group={activeCategory} skills={filteredSkills} wide />
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         ) : (
           /* Interactive Technology Constellation View */
-          <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-8 rounded-2xl border border-white/[0.08] bg-[#0D1017] p-4 sm:p-6 overflow-hidden">
+          <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="surface lg:col-span-8 rounded-[22px] border border-white/[0.08] p-4 sm:p-6 overflow-hidden">
               <svg
                 viewBox="0 0 720 360"
                 role="img"
@@ -260,7 +314,7 @@ export function SkillsSection({ motionProfile }: SkillsSectionProps) {
                         y1={nodeA.y}
                         x2={nodeB.x}
                         y2={nodeB.y}
-                        stroke={highlighted ? '#3B82F6' : 'rgba(255,255,255,0.08)'}
+                        style={{ stroke: highlighted ? 'var(--color-brand-500)' : 'rgba(255,255,255,0.07)' }}
                         strokeWidth={highlighted ? 1.6 : 1}
                         strokeDasharray={highlighted ? '6 18' : undefined}
                         className={highlighted ? 'animate-signal-dash' : 'transition-colors duration-200'}
@@ -286,22 +340,35 @@ export function SkillsSection({ motionProfile }: SkillsSectionProps) {
                       aria-label={`Inspect ${skill.name}`}
                       className="cursor-pointer focus:outline-none"
                     >
+                      {isSelected && <circle cx={x} cy={y} r={32} style={{ fill: 'color-mix(in srgb, var(--color-brand-500) 15%, transparent)' }} />}
                       <circle
                         cx={x}
                         cy={y}
                         r={isSelected ? 22 : 16}
-                        fill={isSelected ? '#2563EB' : '#06070A'}
-                        stroke={isSelected ? '#93C5FD' : 'rgba(255,255,255,0.22)'}
+                        style={{
+                          fill: isSelected ? 'var(--color-brand-600)' : 'var(--color-canvas)',
+                          stroke: isSelected ? 'var(--color-brand-200)' : 'rgba(255,255,255,0.2)',
+                        }}
                         strokeWidth={isSelected ? 2 : 1.2}
                         className="transition-all duration-200"
                       />
+                      {(() => {
+                        const brand = getBrandIcon(skill.id);
+                        if (!brand) return null;
+                        const size = isSelected ? 18 : 14;
+                        return (
+                          <svg x={x - size / 2} y={y - size / 2} width={size} height={size} viewBox="0 0 24 24">
+                            <path d={brand.path} style={{ fill: isSelected ? '#FFFFFF' : brandColorForMode(brand.hex) }} />
+                          </svg>
+                        );
+                      })()}
                       <rect
                         x={x - (skill.name.length * 3.6 + 10)}
                         y={y + 21}
                         width={skill.name.length * 7.2 + 20}
                         height={18}
-                        rx={4}
-                        fill="#0D1017"
+                        rx={9}
+                        fill="var(--color-surface)"
                       />
                       <text
                         x={x}
@@ -309,7 +376,7 @@ export function SkillsSection({ motionProfile }: SkillsSectionProps) {
                         textAnchor="middle"
                         fill={isSelected ? '#FFFFFF' : '#94A3B8'}
                         fontSize="11"
-                        fontFamily="JetBrains Mono, monospace"
+                        fontFamily="Geist Mono, monospace"
                       >
                         {skill.name}
                       </text>
@@ -319,33 +386,40 @@ export function SkillsSection({ motionProfile }: SkillsSectionProps) {
               </svg>
             </div>
 
-            <div className="lg:col-span-4 rounded-2xl border border-white/[0.08] bg-[#0D1017] p-6 flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-                  <span className="capitalize">{selectedSkill.category}</span>
-                  <span>Selected Node</span>
-                </div>
-                <h3 className="font-display text-2xl font-bold text-white">
-                  {selectedSkill.name}
-                </h3>
-                <p className="font-mono text-xs text-[#60A5FA]">
-                  {selectedSkill.role}
-                </p>
-                <p className="text-sm leading-relaxed text-slate-300">
-                  {selectedSkill.summary}
-                </p>
-              </div>
+            <div className="surface lg:col-span-4 rounded-[22px] border border-white/[0.08] p-6 flex flex-col justify-between">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={selectedSkill.id}
+                  initial={reduced ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                  transition={{ duration: reduced ? 0 : 0.25, ease: MOTION_EASINGS.appleEase }}
+                  className="space-y-4"
+                >
+                  <div className="flex items-center justify-between text-[13px] text-slate-500">
+                    <span>{CATEGORY_META[selectedSkill.category].label}</span>
+                    <span>Selected Node</span>
+                  </div>
+                  <h3 className="font-display text-3xl font-semibold tracking-[-0.035em] text-white">
+                    {selectedSkill.name}
+                  </h3>
+                  <p className="text-sm font-medium text-brand-400">
+                    {selectedSkill.role}
+                  </p>
+                  <p className="text-sm leading-relaxed text-slate-300">{selectedSkill.summary}</p>
+                </motion.div>
+              </AnimatePresence>
 
-              <div className="mt-6 pt-5 border-t border-white/[0.08] flex flex-wrap gap-2">
+              <div className="mt-6 pt-5 border-t border-white/[0.07] flex flex-wrap gap-1.5">
                 {filteredSkills.slice(0, 6).map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setSelectedSkill(item)}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-mono transition-colors ${
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
                       selectedSkill.id === item.id
-                        ? 'bg-[#2563EB] text-white'
-                        : 'bg-[#06070A] text-slate-400 hover:text-white border border-white/10'
+                        ? 'bg-white text-canvas'
+                        : 'bg-white/[0.03] text-slate-400 hover:text-white border border-white/10'
                     }`}
                   >
                     {item.name}

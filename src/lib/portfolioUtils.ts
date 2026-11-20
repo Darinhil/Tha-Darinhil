@@ -23,7 +23,9 @@ export interface ProjectItem {
   imageUrl: string;
   imageAlt: string;
   githubUrl: string;
-  demoMode: 'event' | 'leave' | 'ecommerce';
+  /** Deployed site; leave empty and the card's Live Demo button shows "Coming soon" */
+  liveUrl: string;
+  demoMode: 'event' | 'leave' | 'ecommerce' | 'booking' | 'finance';
 }
 
 export interface ContactFormValues {

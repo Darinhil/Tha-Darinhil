@@ -3,16 +3,24 @@ import type { ProjectItem, SkillItem } from '../lib/portfolioUtils';
 export const PROFILE = {
   name: 'Tha Darinhil',
   role: 'Full-Stack Developer',
+  // Roles the hero types and backspaces through, in order
+  typedRoles: ['Full-Stack Developer', 'Frontend Developer', 'Backend Developer', 'REST API Developer'],
   headline: 'Building Digital Experiences From Frontend to Backend.',
   subheadline:
     'I design and develop modern, scalable, and user-focused digital experiences, combining creative frontend interfaces with reliable backend architecture.',
   education: 'Passerelles Numériques Cambodia (PNC)',
   internship: 'Live&Learn Cambodia',
   location: 'Phnom Penh, Cambodia',
-  email: 'darinhil.tha@student.passerellesnumeriques.org',
+  email: 'thadarinhil@gmail.com',
   githubUrl: 'https://github.com/thadarinhil',
   linkedinUrl: 'https://www.linkedin.com/in/tha-darinhil',
-  workspaceImage: '/src/assets/images/developer_workspace_portrait_1795070796272.jpg',
+  workspaceImage: '/src/assets/images/picture.jpg',
+  heroIllustration: '/src/assets/images/hero-3d.webp',
+  aboutIllustration: '/src/assets/images/about-3d.webp',
+  workIllustration: '/src/assets/images/work-3d.webp',
+  skillsIllustration: '/src/assets/images/skill-3d.webp',
+  experienceIllustration: '/src/assets/images/experience-3d.webp',
+  servicesIllustration: '/src/assets/images/services-3d.webp',
 } as const;
 
 export const HERO_FLOATING_TECH = [
@@ -24,12 +32,13 @@ export const HERO_FLOATING_TECH = [
   { label: 'Node.js', layer: 'Runtime', x: '22%', y: '86%', depth: 1.3 },
 ] as const;
 
+// Ordered to match the section order on the page
 export const NAV_LINKS = [
-  { id: 'hero', label: 'Home' },
+  { id: 'projects', label: 'Work' },
   { id: 'about', label: 'About' },
   { id: 'skills', label: 'Skills' },
-  { id: 'projects', label: 'Projects' },
   { id: 'experience', label: 'Experience' },
+  { id: 'services', label: 'Services' },
 ] as const;
 
 export const SKILLS: SkillItem[] = [
@@ -205,6 +214,99 @@ export const SKILLS: SkillItem[] = [
 
 export const PROJECTS: ProjectItem[] = [
   {
+    id: 'student-leave-management',
+    title: 'Student Leave Management System',
+    categoryLabel: 'Institutional Workflow App',
+    roleSummary: 'CRUD Features, REST APIs & Responsive Pages',
+    focus: 'backend',
+    year: 'Jul 2026',
+    shortDescription:
+      'Submit, manage, and track student leave requests with full leave history.',
+    architectureOverview:
+      'CRUD modules for leave requests and leave types sit behind REST APIs for creating, updating, and retrieving requests. Responsive pages let students submit requests and review their leave history on any device.',
+    stack: ['PHP', 'Laravel', 'JavaScript', 'MySQL', 'Bootstrap', 'REST APIs'],
+    features: [
+      'CRUD features for managing leave requests and leave types',
+      'REST APIs for creating, updating, and retrieving leave requests',
+      'Responsive pages for submitting leave requests and viewing leave history',
+    ],
+    imageUrl: '/src/assets/images/project_student_leave_1795070796555.jpg',
+    imageAlt: 'Student Leave Management System web portal interface mockup',
+    githubUrl: 'https://github.com/thadarinhil',
+    liveUrl: '', // add the deployed link here
+    demoMode: 'leave',
+  },
+  {
+    id: 'mr-fixer',
+    title: 'Mr. Fixer',
+    categoryLabel: 'Home Services Booking Platform',
+    roleSummary: 'Developer & QA Tester',
+    focus: 'full-stack',
+    year: 'Mar – Apr 2026',
+    shortDescription:
+      'Book home repair services: plumbing, electrical, cleaning, and maintenance.',
+    architectureOverview:
+      'A React.js frontend backed by a Node.js API with MySQL for data and Redis for fast access. Built as a team, working as both developer and QA tester, with Git, GitHub, Jira, Figma, Postman, and VS Code across the workflow.',
+    stack: ['React.js', 'Node.js', 'MySQL', 'Redis', 'Jira', 'Figma', 'Postman'],
+    features: [
+      'Web app for booking home repair services: plumbing, electrical, cleaning, and maintenance',
+      'Worked as both developer and QA tester',
+      'Built with React.js, Node.js, MySQL, and Redis',
+      'Collaborated with teammates using Git, GitHub, Jira, Figma, Postman, and VS Code',
+    ],
+    imageUrl: '/src/assets/images/projects/mr-fixer.svg',
+    imageAlt: 'Mr. Fixer home repair booking app interface',
+    githubUrl: 'https://github.com/thadarinhil',
+    liveUrl: '', // add the deployed link here
+    demoMode: 'booking',
+  },
+  {
+    id: 'expense-tracker',
+    title: 'Expense Tracker',
+    categoryLabel: 'Team Web Application',
+    roleSummary: 'Team Lead: Planning, Task Distribution & Development',
+    focus: 'frontend',
+    year: 'Jan 2026',
+    shortDescription:
+      'Track income and spending, led as a team from planning to delivery.',
+    architectureOverview:
+      'A client-side web application built with HTML, CSS, and JavaScript. As team lead, I handled project planning, distributed tasks across the team, and kept the development workflow on track.',
+    stack: ['HTML', 'CSS', 'JavaScript'],
+    features: [
+      'Led a team to develop an Expense Tracker web application',
+      'Managed project planning, task distribution, and development workflow',
+      'Built with HTML, CSS, and JavaScript',
+    ],
+    imageUrl: '/src/assets/images/projects/expense-tracker.svg',
+    imageAlt: 'Expense Tracker dashboard interface',
+    githubUrl: 'https://github.com/thadarinhil',
+    liveUrl: '', // add the deployed link here
+    demoMode: 'finance',
+  },
+  {
+    id: 'anime-shop',
+    title: 'Anime Shop',
+    categoryLabel: 'Web Design Project',
+    roleSummary: 'Responsive E-commerce UI & Reusable Components',
+    focus: 'frontend',
+    year: 'Sep – Oct 2025',
+    shortDescription:
+      'Responsive e-commerce interfaces for browsing and managing products.',
+    architectureOverview:
+      'A responsive storefront built from reusable UI components and flexible layouts, styled with modern CSS and Tailwind CSS so browsing and product management work smoothly on every screen size.',
+    stack: ['HTML', 'CSS', 'Tailwind CSS'],
+    features: [
+      'Responsive e-commerce interfaces for browsing and managing products',
+      'Reusable UI components and responsive layouts',
+      'Modern CSS and Tailwind CSS techniques',
+    ],
+    imageUrl: '/src/assets/images/projects/anime-shop.svg',
+    imageAlt: 'Anime Shop storefront interface',
+    githubUrl: 'https://github.com/thadarinhil',
+    liveUrl: '', // add the deployed link here
+    demoMode: 'ecommerce',
+  },
+  {
     id: 'event-registration-system',
     title: 'Event Registration System',
     categoryLabel: 'Full-Stack Web Platform',
@@ -212,7 +314,7 @@ export const PROJECTS: ProjectItem[] = [
     focus: 'full-stack',
     year: '2025',
     shortDescription:
-      'End-to-end event discovery, attendee registration, and schedule management platform built for seamless organizer workflows and real-time capacity tracking.',
+      'Event discovery, attendee registration, and schedules with live capacity tracking.',
     architectureOverview:
       'Architected with a clear separation between the reactive frontend dashboard and a RESTful backend service. Handles attendee registration validation, seat availability checks, and organized schedule timelines backed by normalized MySQL tables.',
     stack: ['Vue.js', 'Laravel', 'PHP', 'MySQL', 'Tailwind CSS', 'REST APIs'],
@@ -225,53 +327,8 @@ export const PROJECTS: ProjectItem[] = [
     imageUrl: '/src/assets/images/project_event_registration_1795070796276.jpg',
     imageAlt: 'Event Registration System web application interface mockup',
     githubUrl: 'https://github.com/thadarinhil',
+    liveUrl: '', // add the deployed link here
     demoMode: 'event',
-  },
-  {
-    id: 'student-leave-management',
-    title: 'Student Leave Management System',
-    categoryLabel: 'Institutional Workflow App',
-    roleSummary: 'Backend Workflow Logic, Role Permissions & Database Design',
-    focus: 'backend',
-    year: '2025',
-    shortDescription:
-      'Role-based academic portal streamlining student leave requests, advisor review queues, and transparent approval tracking.',
-    architectureOverview:
-      'Designed around structured state transitions for leave applications (Submitted, Under Review, Approved, Declined). Implements role-aware views for students and academic coordinators with clear audit trails and leave balance summaries.',
-    stack: ['PHP', 'Laravel', 'JavaScript', 'MySQL', 'Bootstrap', 'REST APIs'],
-    features: [
-      'Structured student leave request form with date-range and category validation',
-      'Multi-stage review workflow for academic advisors and administrators',
-      'Instant status visibility and personal leave balance breakdown',
-      'Centralized request table with status filtering and history logs',
-    ],
-    imageUrl: '/src/assets/images/project_student_leave_1795070796555.jpg',
-    imageAlt: 'Student Leave Management System web portal interface mockup',
-    githubUrl: 'https://github.com/thadarinhil',
-    demoMode: 'leave',
-  },
-  {
-    id: 'ecommerce-application',
-    title: 'E-commerce Application',
-    categoryLabel: 'Full-Stack Commerce Experience',
-    roleSummary: 'Responsive Storefront UI, Cart State & REST API Integration',
-    focus: 'frontend',
-    year: '2024',
-    shortDescription:
-      'Modern digital storefront combining responsive product discovery, interactive cart state management, and structured backend order processing.',
-    architectureOverview:
-      'Combines a fluid, component-driven storefront UI with an Express and relational database backend. Focuses on fast category filtering, persistent cart calculations, and clean checkout validation.',
-    stack: ['Vue.js', 'Node.js', 'Express.js', 'MySQL', 'Tailwind CSS'],
-    features: [
-      'Responsive product catalog grid with category filtering and search',
-      'Real-time cart drawer with quantity controls and subtotal calculation',
-      'REST API endpoints for product inventory and order submission',
-      'Clean UI/UX focused on visual clarity and frictionless checkout',
-    ],
-    imageUrl: '/src/assets/images/project_ecommerce_app_1795070796462.jpg',
-    imageAlt: 'E-commerce web application storefront interface mockup',
-    githubUrl: 'https://github.com/thadarinhil',
-    demoMode: 'ecommerce',
   },
 ];
 
@@ -293,11 +350,11 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
     organization: 'Passerelles Numériques Cambodia (PNC)',
     type: 'Education',
     description:
-      'Intensive technical and professional training in full-stack software engineering, relational databases, and agile team collaboration.',
+      'Intensive training in full-stack engineering, databases, and agile teamwork.',
     highlights: [
-      'Frontend engineering with HTML5, CSS3, JavaScript, TypeScript, Vue.js, and React',
-      'Backend architecture & REST APIs using PHP, Laravel, Node.js, and Express.js',
-      'Database modeling, normalization, and querying across MySQL and PostgreSQL',
+      'Frontend: HTML, CSS, JavaScript, TypeScript, Vue.js, React',
+      'Backend & REST APIs: PHP, Laravel, Node.js, Express.js',
+      'Databases: MySQL and PostgreSQL modeling',
     ],
   },
   {
@@ -307,11 +364,11 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
     organization: 'Live&Learn Cambodia',
     type: 'Experience',
     description:
-      'Contributed to real-world web application development, bridging user-centered UI/UX design with dependable backend functionality.',
+      'Built real-world web features, from UI/UX design to backend logic.',
     highlights: [
-      'Collaborated with team members to build, test, and refine production features',
-      'Translated Figma layouts into responsive, accessible frontend interfaces',
-      'Integrated frontend views with backend APIs and relational database records',
+      'Built, tested, and shipped features with the team',
+      'Turned Figma designs into responsive, accessible UI',
+      'Connected frontend views to APIs and databases',
     ],
   },
   {
@@ -321,11 +378,11 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
     organization: 'Independent Projects & Engineering',
     type: 'Craft',
     description:
-      'Designing and shipping complete web systems—from database schema design and API contracts to smooth, interactive frontend experiences.',
+      'Designing and shipping complete web systems, from schema to interface.',
     highlights: [
-      'End-to-end delivery across Event Registration, Leave Management, and E-commerce systems',
-      'Clean code practices using Git, GitHub, GitLab, Postman, and Docker',
-      'Focused on performance, responsiveness, and thoughtful motion design',
+      'Leave management, home-service booking, and e-commerce builds',
+      'Clean workflows with Git, Postman, and Docker',
+      'Focused on performance and responsive design',
     ],
   },
 ];
@@ -344,7 +401,7 @@ export const SERVICES: ServiceItem[] = [
     index: '01.',
     title: 'Full-Stack Web Development',
     description:
-      'Complete web applications engineered from database schema to polished user interface, built for maintainability and real-world scale.',
+      'Complete web apps, from database schema to polished UI.',
     deliverables: 'Laravel · Vue.js / React · MySQL',
   },
   {
@@ -352,7 +409,7 @@ export const SERVICES: ServiceItem[] = [
     index: '02.',
     title: 'Frontend Development',
     description:
-      'Modular single-page applications with clean component architecture, reactive state management, and refined motion interactions.',
+      'Component-driven SPAs with clean state and smooth motion.',
     deliverables: 'Vue.js · React.js · JavaScript · TypeScript',
   },
   {
@@ -360,7 +417,7 @@ export const SERVICES: ServiceItem[] = [
     index: '03.',
     title: 'Backend Development',
     description:
-      'Dependable server-side architecture covering authentication, role-based permissions, business workflows, and structured validation.',
+      'Secure server logic: auth, roles, workflows, validation.',
     deliverables: 'PHP · Laravel · Node.js · Express.js',
   },
   {
@@ -368,7 +425,7 @@ export const SERVICES: ServiceItem[] = [
     index: '04.',
     title: 'REST API Development',
     description:
-      'Resource-oriented JSON endpoints with predictable status semantics, middleware pipelines, and thorough Postman verification.',
+      'Predictable JSON APIs, tested end to end.',
     deliverables: 'REST APIs · Laravel · Express.js · Postman',
   },
   {
@@ -376,7 +433,7 @@ export const SERVICES: ServiceItem[] = [
     index: '05.',
     title: 'Database Design',
     description:
-      'Normalized relational data models, foreign-key integrity, and optimized query patterns tailored to application workflows.',
+      'Normalized data models with fast, reliable queries.',
     deliverables: 'MySQL · PostgreSQL · SQLite',
   },
   {
@@ -384,7 +441,7 @@ export const SERVICES: ServiceItem[] = [
     index: '06.',
     title: 'Responsive UI Implementation',
     description:
-      'Translating Figma wireframes and design systems into accessible, mobile-ready interfaces with consistent spacing and contrast.',
+      'Figma designs turned into accessible, mobile-ready UI.',
     deliverables: 'Figma · Tailwind CSS · Bootstrap · HTML5 / CSS3',
   },
 ];

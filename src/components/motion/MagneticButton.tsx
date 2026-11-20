@@ -70,7 +70,7 @@ export function MagneticButton({
     'aria-label': ariaLabel,
     'data-cursor': cursorType,
     'data-cursor-label': cursorLabel,
-    className: `inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3B82F6] ${className}`,
+    className: `inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${className}`,
   };
 
   if (href) {

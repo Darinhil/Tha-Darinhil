@@ -1,172 +1,113 @@
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { TIMELINE_ENTRIES } from '../../data/portfolioData';
-import {
-  MOTION_DURATIONS,
-  MOTION_EASINGS,
-  type ResponsiveMotionProfile,
-} from '../../lib/motionConfig';
+import { useRef } from 'react';
+import { motion, useReducedMotion, useScroll } from 'motion/react';
+import { Briefcase, GraduationCap, Sparkles } from 'lucide-react';
+import { PROFILE, TIMELINE_ENTRIES, type TimelineEntry } from '../../data/portfolioData';
+import { type ResponsiveMotionProfile } from '../../lib/motionConfig';
+import { Reveal, REVEAL_VIEWPORT } from '../motion/Reveal';
 import { SectionHeader } from '../motion/SectionHeader';
+import { IconTile } from '../ui/IconTile';
+import { SectionBadge3D } from '../ui/SectionBadge3D';
 
-gsap.registerPlugin(ScrollTrigger);
+const TYPE_ICONS: Record<TimelineEntry['type'], typeof Sparkles> = {
+  Education: GraduationCap,
+  Experience: Briefcase,
+  Craft: Sparkles,
+};
 
 interface TimelineSectionProps {
   motionProfile: ResponsiveMotionProfile;
 }
 
 export function TimelineSection({ motionProfile }: TimelineSectionProps) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const lineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const reduced = motionProfile.tier === 'reduced';
-
-  useEffect(() => {
-    if (reduced || !sectionRef.current) return;
-
-    const ctx = gsap.context(() => {
-      if (lineRef.current) {
-        gsap.fromTo(
-          lineRef.current,
-          { scaleY: 0 },
-          {
-            scaleY: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: '.timeline-container',
-              start: 'top 76%',
-              end: 'bottom 78%',
-              scrub: 0.5,
-            },
-          }
-        );
-      }
-
-      const revealTimeline = () => {
-        gsap.fromTo(
-          '.timeline-card',
-          { x: 20, opacity: 0 },
-          {
-            x: 0,
-            opacity: 1,
-            duration: MOTION_DURATIONS.complex,
-            stagger: 0.1 * motionProfile.staggerScale,
-            ease: MOTION_EASINGS.power3Out,
-            clearProps: 'transform,opacity',
-          }
-        );
-        gsap.fromTo(
-          '.timeline-node',
-          { scale: 0.5, opacity: 0 },
-          {
-            scale: 1,
-            opacity: 1,
-            duration: MOTION_DURATIONS.normal,
-            stagger: 0.1 * motionProfile.staggerScale,
-            ease: MOTION_EASINGS.backSubtle,
-            clearProps: 'transform,opacity',
-          }
-        );
-      };
-
-      const el = containerRef.current;
-      if (!el) return;
-
-      if (el.getBoundingClientRect().top <= window.innerHeight * 0.96) {
-        revealTimeline();
-        return;
-      }
-
-      gsap.set('.timeline-card', { x: 20, opacity: 0 });
-      gsap.set('.timeline-node', { scale: 0.5, opacity: 0 });
-
-      const io = new IntersectionObserver(
-        (entries) => {
-          if (entries.some((e) => e.isIntersecting || e.boundingClientRect.top <= window.innerHeight)) {
-            revealTimeline();
-            io.disconnect();
-          }
-        },
-        { threshold: 0.04 }
-      );
-      io.observe(el);
-
-      return () => io.disconnect();
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, [reduced, motionProfile.staggerScale]);
+  const reduceMotion = useReducedMotion();
+  // 0 -> 1 as the timeline travels from 75% down the viewport to 75% up it
+  const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start 75%', 'end 75%'] });
 
   return (
-    <section
-      id="experience"
-      ref={sectionRef}
-      className="relative border-t border-white/[0.06] py-24 lg:py-32"
-    >
-      <div className="mx-auto max-w-6xl px-6 lg:px-8">
-        <SectionHeader
-          kicker="04. Experience & Education"
-          title="Foundations built at PNC and refined in real product teams."
-          reducedMotion={reduced}
-          className="mb-14"
-          titleClassName="max-w-2xl"
-        />
+    <section id="experience" className="relative py-20 sm:py-24 lg:py-32">
+      <div aria-hidden="true" className="section-rule" />
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14">
+          {/* Sticky intro column */}
+          <div className="lg:col-span-5">
+            <div className="lg:sticky lg:top-32">
+              <SectionHeader
+                kicker="04. Experience & Education"
+                badge={<SectionBadge3D src={PROFILE.experienceIllustration} width={640} height={573} reducedMotion={reduced} />}
+                title="Trained at PNC, proven in real teams."
+                accent="proven in real teams."
+                reducedMotion={reduced}
+                titleClassName="lg:text-[3rem]"
+              />
+            </div>
+          </div>
 
-        <div ref={containerRef} className="timeline-container relative pl-8 sm:pl-12">
-          {/* Static subtle rail */}
-          <div
-            aria-hidden="true"
-            className="absolute left-3 sm:left-4 top-2 bottom-2 w-[1px] bg-white/10"
-          />
-          {/* Scroll-drawn active cobalt line */}
-          <div
-            ref={lineRef}
-            aria-hidden="true"
-            className="absolute left-3 sm:left-4 top-2 bottom-2 w-[2px] -translate-x-[0.5px] origin-top bg-gradient-to-b from-[#3B82F6] via-[#60A5FA] to-[#2563EB] will-change-transform"
-          />
+          {/* Timeline */}
+          <div className="lg:col-span-7">
+            <div ref={containerRef} className="relative pl-10 sm:pl-14">
+              {/* Static subtle rail */}
+              <div
+                aria-hidden="true"
+                className="absolute left-[15px] sm:left-[19px] top-3 bottom-3 w-px bg-white/[0.08]"
+              />
+              {/* Scroll-drawn active cobalt line */}
+              <motion.div
+                aria-hidden="true"
+                style={{ scaleY: reduceMotion ? 1 : scrollYProgress }}
+                className="absolute left-[15px] sm:left-[19px] top-3 bottom-3 w-[2px] -translate-x-[0.5px] origin-top bg-gradient-to-b from-brand-400 via-brand-500 to-brand-secondary/60"
+              />
 
-          <div className="space-y-8">
-            {TIMELINE_ENTRIES.map((entry) => (
-              <div key={entry.id} className="relative">
-                {/* Timeline node */}
-                <div
-                  aria-hidden="true"
-                  className="timeline-node absolute -left-8 sm:-left-12 top-6 flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-[#3B82F6]/60 bg-[#06070A]"
-                >
-                  <span className="h-2 w-2 rounded-full bg-[#60A5FA]" />
-                </div>
+              <div className="space-y-5">
+                {TIMELINE_ENTRIES.map((entry) => {
+                  const Icon = TYPE_ICONS[entry.type];
+                  return (
+                    <Reveal key={entry.id} className="relative" direction="right" distance={28} amount={0.25}>
+                      {/* Timeline node */}
+                      <motion.div
+                        className="absolute -left-10 sm:-left-14 top-6 rounded-full bg-canvas p-1 -m-1"
+                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.4 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={REVEAL_VIEWPORT}
+                        transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.15 }}
+                      >
+                        <IconTile tone="accent" shape="circle" className="h-8! w-8! sm:h-10! sm:w-10! [&_svg]:h-4! [&_svg]:w-4!">
+                          <Icon strokeWidth={1.75} />
+                        </IconTile>
+                      </motion.div>
 
-                <article className="timeline-card rounded-2xl border border-white/[0.08] bg-[#0D1017] p-6 sm:p-8 transition-colors duration-200 hover:border-[#3B82F6]/35">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-slate-400">
-                    <span className="text-[#60A5FA]">{entry.period}</span>
-                    <span>{entry.type}</span>
-                  </div>
+                      <article className="surface spotlight rounded-[22px] border border-white/[0.08] p-6 sm:p-8 transition-[translate,border-color] duration-500 hover:-translate-y-1 hover:border-white/[0.14]">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[13px] font-medium text-brand-400">
+                            {entry.period}
+                          </span>
+                        </div>
 
-                  <h3 className="mt-3 font-display text-xl sm:text-2xl font-bold text-white">
-                    {entry.title}
-                  </h3>
-                  <p className="mt-1 text-sm font-medium text-slate-300">
-                    {entry.organization}
-                  </p>
+                        <h3 className="mt-4 font-display text-xl sm:text-[1.6rem] font-semibold leading-tight tracking-[-0.03em] text-white">
+                          {entry.title}
+                        </h3>
+                        <p className="mt-1.5 text-sm font-medium text-slate-400">{entry.organization}</p>
 
-                  <p className="mt-4 text-sm sm:text-[15px] leading-relaxed text-slate-400 max-w-3xl">
-                    {entry.description}
-                  </p>
+                        <p className="mt-4 text-[15px] leading-relaxed text-slate-400">{entry.description}</p>
 
-                  <ul className="mt-5 grid grid-cols-1 gap-2.5 border-t border-white/[0.06] pt-5 text-sm text-slate-300">
-                    {entry.highlights.map((highlight) => (
-                      <li key={highlight} className="flex items-start gap-2.5">
-                        <span
-                          aria-hidden="true"
-                          className="mt-2 h-1 w-1 rounded-full bg-[#3B82F6] shrink-0"
-                        />
-                        <span>{highlight}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
+                        <ul className="mt-6 space-y-2.5 border-t border-white/[0.06] pt-6 text-sm leading-relaxed text-slate-300">
+                          {entry.highlights.map((highlight) => (
+                            <li key={highlight} className="flex items-start gap-3">
+                              <span
+                                aria-hidden="true"
+                                className="mt-[9px] h-px w-3 shrink-0 bg-brand-400"
+                              />
+                              <span>{highlight}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </article>
+                    </Reveal>
+                  );
+                })}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Inter, 'Segoe UI', Arial, sans-serif">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="75%"><stop offset="0" stop-color="#1b1e28"/><stop offset="1" stop-color="#06070a"/></radialGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="50%"><stop offset="0" stop-color="#ec4899" stop-opacity="0.32"/><stop offset="1" stop-color="#ec4899" stop-opacity="0"/></radialGradient>
+    <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2019"/><stop offset="1" stop-color="#0d0a08"/></linearGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#20232b"/><stop offset="1" stop-color="#0a0b0e"/></linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.07"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <clipPath id="screen"><rect width="1044" height="604" rx="6"/></clipPath>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <ellipse cx="800" cy="420" rx="760" ry="420" fill="url(#glow)"/>
+  <rect y="790" width="1600" height="110" fill="url(#desk)"/>
+  <rect y="790" width="1600" height="2" fill="#3a2e25" opacity="0.6"/>
+  <path d="M760 730 L840 730 L852 792 L748 792 Z" fill="#15171c"/>
+  <ellipse cx="800" cy="796" rx="150" ry="10" fill="#000" opacity="0.6"/>
+  <rect x="660" y="784" width="280" height="12" rx="6" fill="#1c1f26"/>
+  <rect x="260" y="90" width="1080" height="640" rx="22" fill="url(#bezel)" stroke="#2c2f38"/>
+  <g transform="translate(278 108)" clip-path="url(#screen)">
+<defs><linearGradient id="ban" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ec4899"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient><linearGradient id="p1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fde2f3"/><stop offset="1" stop-color="#e9d5ff"/></linearGradient><linearGradient id="p2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dbeafe"/><stop offset="1" stop-color="#e0e7ff"/></linearGradient><linearGradient id="p3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fef3c7"/><stop offset="1" stop-color="#fce7f3"/></linearGradient><linearGradient id="p4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d1fae5"/><stop offset="1" stop-color="#dbeafe"/></linearGradient></defs>
+<rect width="1044" height="604" fill="#fdf8fc"/>
+<rect width="1044" height="58" fill="#fff"/><rect y="58" width="1044" height="1" fill="#f3e8f2"/>
+<path d="M42 17 L46 27 L57 28 L49 35 L51 46 L42 40 L33 46 L35 35 L27 28 L38 27 Z" fill="#ec4899"/>
+<text x="66" y="36" font-size="18" font-weight="800" fill="#1f1530" text-anchor="start" >Anime Shop</text>
+<rect x="330" y="15" width="380" height="30" rx="15" fill="#f6eef6"/>
+<text x="352" y="35" font-size="12" font-weight="400" fill="#a28aa3" text-anchor="start" >Search figures, tees, posters…</text>
+<circle cx="958" cy="30" r="15" fill="#f6eef6"/><path d="M950 25 h3 l3 9 h8 l2 -7 h-11" stroke="#1f1530" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+<circle cx="970" cy="18" r="8" fill="#ec4899"/>
+<text x="970" y="22" font-size="10" font-weight="700" fill="#fff" text-anchor="middle" >2</text>
+<circle cx="1004" cy="30" r="15" fill="#8b5cf6"/>
+<text x="1004" y="35" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >A</text>
+<rect x="28" y="78" width="988" height="170" rx="18" fill="url(#ban)"/>
+<circle cx="880" cy="110" r="70" fill="#fff" opacity="0.12"/><circle cx="960" cy="220" r="46" fill="#fff" opacity="0.1"/><circle cx="780" cy="200" r="24" fill="#fff" opacity="0.14"/>
+<path d="M820 120 l6 14 15 1 -11 10 3 15 -13 -8 -13 8 3 -15 -11 -10 15 -1Z" fill="#fff" opacity="0.85"/>
+<path d="M920 150 l4 9 10 1 -7 6 2 10 -9 -5 -9 5 2 -10 -7 -6 10 -1Z" fill="#fff" opacity="0.6"/>
+<text x="60" y="126" font-size="12" font-weight="700" fill="#ffe4f3" text-anchor="start" letter-spacing="3">NEW SEASON</text>
+<text x="60" y="170" font-size="34" font-weight="800" fill="#fff" text-anchor="start" >Fresh drops are here</text>
+<text x="60" y="198" font-size="14" font-weight="400" fill="#fde7f5" text-anchor="start" >Up to 30% off figures, apparel and posters</text>
+<rect x="60" y="210" width="112" height="28" rx="14" fill="#fff"/>
+<text x="116" y="229" font-size="12" font-weight="700" fill="#ec4899" text-anchor="middle" >Shop now</text>
+<rect x="28" y="266" width="86" height="30" rx="15" fill="#1f1530" stroke="#1f1530"/>
+<text x="71" y="286" font-size="12" font-weight="600" fill="#fff" text-anchor="middle" >All</text>
+<rect x="124" y="266" width="86" height="30" rx="15" fill="#fff" stroke="#efe2ee"/>
+<text x="167" y="286" font-size="12" font-weight="600" fill="#6b5a6c" text-anchor="middle" >Figures</text>
+<rect x="220" y="266" width="86" height="30" rx="15" fill="#fff" stroke="#efe2ee"/>
+<text x="263" y="286" font-size="12" font-weight="600" fill="#6b5a6c" text-anchor="middle" >Apparel</text>
+<rect x="316" y="266" width="86" height="30" rx="15" fill="#fff" stroke="#efe2ee"/>
+<text x="359" y="286" font-size="12" font-weight="600" fill="#6b5a6c" text-anchor="middle" >Posters</text>
+<rect x="412" y="266" width="86" height="30" rx="15" fill="#fff" stroke="#efe2ee"/>
+<text x="455" y="286" font-size="12" font-weight="600" fill="#6b5a6c" text-anchor="middle" >Manga</text>
+<rect x="28" y="314" width="236" height="270" rx="16" fill="#fff" stroke="#f1e4f0"/>
+<rect x="38" y="324" width="216" height="160" rx="12" fill="url(#p1)"/>
+<g transform="translate(146 404)"><rect x="-22" y="-6" width="44" height="54" rx="10" fill="#8b5cf6" opacity="0.85"/><circle cx="0" cy="-26" r="20" fill="#ec4899" opacity="0.85"/><rect x="-34" y="48" width="68" height="10" rx="5" fill="#1f1530" opacity="0.2"/></g>
+<circle cx="234" cy="344" r="12" fill="#fff"/><path d="M234 350 l-6 -6 a3.5 3.5 0 0 1 6 -4 a3.5 3.5 0 0 1 6 4 Z" fill="#ec4899"/>
+<text x="44" y="512" font-size="15" font-weight="700" fill="#1f1530" text-anchor="start" >Collector Figure</text>
+<text x="44" y="536" font-size="11" font-weight="400" fill="#f59e0b" text-anchor="start" >★★★★★</text>
+<text x="44" y="566" font-size="17" font-weight="800" fill="#ec4899" text-anchor="start" >$34.99</text>
+<rect x="160" y="546" width="90" height="28" rx="14" fill="#1f1530"/>
+<text x="205" y="565" font-size="11" font-weight="600" fill="#fff" text-anchor="middle" >Add to cart</text>
+<rect x="278" y="314" width="236" height="270" rx="16" fill="#fff" stroke="#f1e4f0"/>
+<rect x="288" y="324" width="216" height="160" rx="12" fill="url(#p2)"/>
+<g transform="translate(396 404)"><path d="M-40 -30 L-16 -42 Q0 -32 16 -42 L40 -30 L32 -10 L22 -14 L22 46 L-22 46 L-22 -14 L-32 -10 Z" fill="#8b5cf6" opacity="0.85"/><path d="M0 -6 l5 10 11 1 -8 7 2 11 -10 -6 -10 6 2 -11 -8 -7 11 -1Z" fill="#fff"/></g>
+<circle cx="484" cy="344" r="12" fill="#fff"/><path d="M484 350 l-6 -6 a3.5 3.5 0 0 1 6 -4 a3.5 3.5 0 0 1 6 4 Z" fill="#ec4899"/>
+<text x="294" y="512" font-size="15" font-weight="700" fill="#1f1530" text-anchor="start" >Graphic Tee</text>
+<text x="294" y="536" font-size="11" font-weight="400" fill="#f59e0b" text-anchor="start" >★★★★★</text>
+<text x="294" y="566" font-size="17" font-weight="800" fill="#ec4899" text-anchor="start" >$19.50</text>
+<rect x="410" y="546" width="90" height="28" rx="14" fill="#1f1530"/>
+<text x="455" y="565" font-size="11" font-weight="600" fill="#fff" text-anchor="middle" >Add to cart</text>
+<rect x="528" y="314" width="236" height="270" rx="16" fill="#fff" stroke="#f1e4f0"/>
+<rect x="538" y="324" width="216" height="160" rx="12" fill="url(#p3)"/>
+<g transform="translate(646 404)"><rect x="-30" y="-46" width="60" height="92" rx="4" fill="#fff" stroke="#ec4899" stroke-width="3"/><circle cx="0" cy="-14" r="16" fill="#ec4899" opacity="0.7"/><path d="M-24 40 L-6 14 L6 26 L14 18 L24 40 Z" fill="#8b5cf6" opacity="0.7"/></g>
+<circle cx="734" cy="344" r="12" fill="#fff"/><path d="M734 350 l-6 -6 a3.5 3.5 0 0 1 6 -4 a3.5 3.5 0 0 1 6 4 Z" fill="#ec4899"/>
+<text x="544" y="512" font-size="15" font-weight="700" fill="#1f1530" text-anchor="start" >Art Poster</text>
+<text x="544" y="536" font-size="11" font-weight="400" fill="#f59e0b" text-anchor="start" >★★★★★</text>
+<text x="544" y="566" font-size="17" font-weight="800" fill="#ec4899" text-anchor="start" >$12.00</text>
+<rect x="660" y="546" width="90" height="28" rx="14" fill="#1f1530"/>
+<text x="705" y="565" font-size="11" font-weight="600" fill="#fff" text-anchor="middle" >Add to cart</text>
+<rect x="778" y="314" width="236" height="270" rx="16" fill="#fff" stroke="#f1e4f0"/>
+<rect x="788" y="324" width="216" height="160" rx="12" fill="url(#p4)"/>
+<g transform="translate(896 404)"><rect x="-30" y="-44" width="54" height="86" rx="4" fill="#8b5cf6" opacity="0.9"/><rect x="-24" y="-44" width="54" height="86" rx="4" fill="#ec4899" opacity="0.9"/><rect x="-16" y="-30" width="38" height="8" rx="2" fill="#fff"/><circle cx="3" cy="6" r="14" fill="#fff" opacity="0.8"/></g>
+<circle cx="984" cy="344" r="12" fill="#fff"/><path d="M984 350 l-6 -6 a3.5 3.5 0 0 1 6 -4 a3.5 3.5 0 0 1 6 4 Z" fill="#ec4899"/>
+<text x="794" y="512" font-size="15" font-weight="700" fill="#1f1530" text-anchor="start" >Manga Vol. 1</text>
+<text x="794" y="536" font-size="11" font-weight="400" fill="#f59e0b" text-anchor="start" >★★★★★</text>
+<text x="794" y="566" font-size="17" font-weight="800" fill="#ec4899" text-anchor="start" >$9.99</text>
+<rect x="910" y="546" width="90" height="28" rx="14" fill="#1f1530"/>
+<text x="955" y="565" font-size="11" font-weight="600" fill="#fff" text-anchor="middle" >Add to cart</text>
+    <rect width="1044" height="604" fill="url(#sheen)"/>
+  </g>
+</svg>

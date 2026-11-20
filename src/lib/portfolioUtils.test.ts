@@ -27,11 +27,13 @@ test('filterSkillsByCategory returns all skills or specific category subset', ()
 
 test('filterProjectsByFocus filters projects accurately', () => {
   const all = filterProjectsByFocus(PROJECTS, 'all');
-  assert.equal(all.length, 3);
+  assert.equal(all.length, 5);
 
   const fullStack = filterProjectsByFocus(PROJECTS, 'full-stack');
-  assert.equal(fullStack.length, 1);
-  assert.equal(fullStack[0].id, 'event-registration-system');
+  assert.deepEqual(
+    fullStack.map((p) => p.id),
+    ['mr-fixer', 'event-registration-system']
+  );
 });
 
 test('validateContactForm rejects empty or invalid inputs and accepts valid submissions', () => {

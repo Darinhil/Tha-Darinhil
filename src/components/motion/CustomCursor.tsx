@@ -1,19 +1,31 @@
 import { useEffect, useRef, useState } from 'react';
-import { lerp } from '../../lib/motionConfig';
 
 interface CustomCursorProps {
   enabled: boolean;
 }
 
-type CursorVariant = 'default' | 'link' | 'button' | 'project';
+// Project cards use the normal button ring (no large labelled bubble)
+type CursorVariant = 'default' | 'link' | 'button';
+
+interface Ripple {
+  id: number;
+  x: number;
+  y: number;
+}
+
+// How far (px) the trailing ring may fall behind the dot before it is pulled along
+const MAX_RING_LAG = 28;
+// Share of the remaining distance the ring closes per 60fps frame
+const RING_FOLLOW = 0.3;
+const RIPPLE_MS = 550;
 
 export function CustomCursor({ enabled }: CustomCursorProps) {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [variant, setVariant] = useState<CursorVariant>('default');
-  const [label, setLabel] = useState<string>('');
   const [isPressed, setIsPressed] = useState(false);
+  const [ripples, setRipples] = useState<Ripple[]>([]);
 
   useEffect(() => {
     if (!enabled) {
@@ -26,20 +38,50 @@ export function CustomCursor({ enabled }: CustomCursorProps) {
     const pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     const ring = { x: pointer.x, y: pointer.y };
     let rafId = 0;
+    let lastTime = performance.now();
+    let snapNext = true;
+    let rippleId = 0;
+    // Press "pinch" is animated inside the transform so it scales around the ring's centre
+    // (a separate CSS `scale` would scale the translated position and fling the ring away)
+    let pressed = false;
+    let ringScale = 1;
+
+    const snapRing = () => {
+      ring.x = pointer.x;
+      ring.y = pointer.y;
+    };
 
     const handleMove = (e: PointerEvent) => {
       if (e.pointerType === 'touch') return;
       pointer.x = e.clientX;
       pointer.y = e.clientY;
+      // First move after (re)entering: start the ring on the pointer instead of flying in
+      if (snapNext) {
+        snapRing();
+        snapNext = false;
+      }
       setVisible(true);
     };
 
     const handleLeave = () => {
       setVisible(false);
+      snapNext = true;
     };
 
-    const handleDown = () => setIsPressed(true);
-    const handleUp = () => setIsPressed(false);
+    const handleDown = (e: MouseEvent) => {
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      snapRing(); // never show the ring detached at the moment of a click
+      pressed = true;
+      setIsPressed(true);
+      const id = ++rippleId;
+      setRipples((prev) => [...prev, { id, x: e.clientX, y: e.clientY }]);
+      window.setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), RIPPLE_MS);
+    };
+    const handleUp = () => {
+      pressed = false;
+      setIsPressed(false);
+    };
 
     const handleOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
@@ -51,37 +93,43 @@ export function CustomCursor({ enabled }: CustomCursorProps) {
 
       if (!interactive) {
         setVariant('default');
-        setLabel('');
         return;
       }
 
-      const customType = interactive.dataset.cursor as CursorVariant | undefined;
-      const customLabel = interactive.dataset.cursorLabel || '';
+      const customType = interactive.dataset.cursor;
 
-      if (customType === 'project') {
-        setVariant('project');
-        setLabel(customLabel || 'View Project');
-      } else if (interactive.tagName === 'BUTTON' || customType === 'button') {
+      if (interactive.tagName === 'BUTTON' || customType === 'button' || customType === 'project') {
         setVariant('button');
-        setLabel(customLabel);
       } else if (interactive.tagName === 'A' || customType === 'link') {
         setVariant('link');
-        setLabel(customLabel);
       } else {
         setVariant('default');
-        setLabel('');
       }
     };
 
-    const render = () => {
-      ring.x = lerp(ring.x, pointer.x, 0.16);
-      ring.y = lerp(ring.y, pointer.y, 0.16);
+    const render = (now: number) => {
+      // Frame-rate independent easing so the trail feels the same at 60Hz and 144Hz
+      const dt = Math.min(64, now - lastTime);
+      lastTime = now;
+      const follow = 1 - Math.pow(1 - RING_FOLLOW, dt / 16.67);
+      ring.x += (pointer.x - ring.x) * follow;
+      ring.y += (pointer.y - ring.y) * follow;
+
+      // Keep the ring tethered: it can trail, but never drift far from the dot
+      const dx = ring.x - pointer.x;
+      const dy = ring.y - pointer.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > MAX_RING_LAG) {
+        ring.x = pointer.x + (dx / dist) * MAX_RING_LAG;
+        ring.y = pointer.y + (dy / dist) * MAX_RING_LAG;
+      }
 
       if (dotRef.current) {
         dotRef.current.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0) translate(-50%, -50%)`;
       }
+      ringScale += ((pressed ? 0.75 : 1) - ringScale) * follow;
       if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ring.x}px, ${ring.y}px, 0) translate(-50%, -50%)`;
+        ringRef.current.style.transform = `translate3d(${ring.x}px, ${ring.y}px, 0) translate(-50%, -50%) scale(${ringScale.toFixed(3)})`;
       }
 
       rafId = window.requestAnimationFrame(render);
@@ -89,6 +137,7 @@ export function CustomCursor({ enabled }: CustomCursorProps) {
 
     window.addEventListener('pointermove', handleMove, { passive: true });
     document.addEventListener('mouseleave', handleLeave);
+    window.addEventListener('blur', handleLeave);
     window.addEventListener('mousedown', handleDown);
     window.addEventListener('mouseup', handleUp);
     document.addEventListener('mouseover', handleOver, { passive: true });
@@ -98,6 +147,7 @@ export function CustomCursor({ enabled }: CustomCursorProps) {
       document.body.classList.remove('has-custom-cursor');
       window.removeEventListener('pointermove', handleMove);
       document.removeEventListener('mouseleave', handleLeave);
+      window.removeEventListener('blur', handleLeave);
       window.removeEventListener('mousedown', handleDown);
       window.removeEventListener('mouseup', handleUp);
       document.removeEventListener('mouseover', handleOver);
@@ -109,37 +159,33 @@ export function CustomCursor({ enabled }: CustomCursorProps) {
     return null;
   }
 
-  const isProject = variant === 'project';
-  const isButton = variant === 'button';
-  const isLink = variant === 'link';
-
-  const ringSizeClass = isProject
-    ? 'w-24 h-24 bg-[#2563EB]/90 border-[#60A5FA]/60 text-white'
-    : isButton
+  const ringSizeClass =
+    variant === 'button'
       ? 'w-12 h-12 bg-white/10 border-white/50'
-      : isLink
-        ? 'w-11 h-11 bg-[#2563EB]/15 border-[#3B82F6]/60'
+      : variant === 'link'
+        ? 'w-11 h-11 bg-brand-600/15 border-brand-500/60'
         : 'w-9 h-9 bg-transparent border-white/30';
 
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[90]">
+      {/* Click ripples */}
+      {ripples.map((r) => (
+        <span
+          key={r.id}
+          className="cursor-ripple fixed top-0 left-0 h-10 w-10 rounded-full border border-brand-400/70"
+          style={{ transform: `translate3d(${r.x}px, ${r.y}px, 0) translate(-50%, -50%)` }}
+        />
+      ))}
+
       <div
         ref={ringRef}
-        className={`fixed top-0 left-0 rounded-full border backdrop-blur-[2px] flex items-center justify-center transition-[width,height,background-color,border-color,opacity] duration-200 ease-out will-change-transform ${ringSizeClass} ${
-          isPressed ? 'scale-90' : 'scale-100'
-        }`}
-      >
-        {isProject && label && (
-          <span className="text-[11px] font-medium tracking-tight text-white whitespace-nowrap px-2">
-            {label}
-          </span>
-        )}
-      </div>
+        className={`fixed top-0 left-0 rounded-full border backdrop-blur-[2px] transition-[width,height,background-color,border-color,opacity] duration-200 ease-out will-change-transform ${ringSizeClass}`}
+      />
 
       <div
         ref={dotRef}
         className={`fixed top-0 left-0 rounded-full bg-white transition-[width,height,opacity] duration-150 will-change-transform ${
-          isProject ? 'w-0 h-0 opacity-0' : isPressed ? 'w-2 h-2 opacity-100' : 'w-1.5 h-1.5 opacity-95'
+          isPressed ? 'w-2.5 h-2.5 opacity-100' : 'w-1.5 h-1.5 opacity-95'
         }`}
       />
     </div>

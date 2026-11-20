@@ -5,6 +5,8 @@ import { NAV_LINKS, PROFILE } from '../../data/portfolioData';
 import { MOTION_EASINGS } from '../../lib/motionConfig';
 import { resolveActiveSection } from '../../lib/portfolioUtils';
 import { MagneticButton } from '../motion/MagneticButton';
+import { ModeToggle } from '../ui/ModeToggle';
+import { ThemePicker } from '../ui/ThemePicker';
 
 interface NavbarProps {
   reducedMotion: boolean;
@@ -14,6 +16,7 @@ interface NavbarProps {
 export function Navbar({ reducedMotion, onNavigate }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [activeId, setActiveId] = useState<string>('hero');
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -64,32 +67,50 @@ export function Navbar({ reducedMotion, onNavigate }: NavbarProps) {
     onNavigate(sectionId);
   };
 
-  return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-[background-color,border-color,padding,box-shadow] duration-300 ${
-        scrolled
-          ? 'bg-[#06070A]/85 backdrop-blur-md border-b border-white/[0.08] py-3.5 shadow-[0_12px_32px_rgba(0,0,0,0.45)]'
-          : 'bg-transparent border-b border-transparent py-5'
-      }`}
-    >
-      <div className="mx-auto grid max-w-6xl grid-cols-2 md:grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 lg:px-8">
-        {/* Zone 1: Single text element wordmark */}
-        <a
-          href="#hero"
-          onClick={(e) => {
-            e.preventDefault();
-            handleLinkClick('hero');
-          }}
-          data-cursor="link"
-          className="justify-self-start font-display text-lg font-semibold tracking-tight text-[#F4F6F9] whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#3B82F6]"
-        >
-          {PROFILE.name}
-        </a>
+  // The pill follows the hovered link, falling back to the active section
+  const pillId = hoveredId ?? activeId;
 
-        {/* Zone 2: 5 centered single-line text navigation links */}
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50">
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 border-b border-white/[0.06] bg-canvas/70 backdrop-blur-xl backdrop-saturate-150 transition-opacity duration-500 ${
+          scrolled ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      <div
+        className={`relative mx-auto grid max-w-6xl grid-cols-2 md:grid-cols-[1fr_auto_1fr] items-center gap-6 px-5 sm:px-6 lg:px-8 transition-[padding] duration-300 ${
+          scrolled ? 'py-3' : 'py-5'
+        }`}
+      >
+        {/* Colour theme picker, light/dark toggle, name (links home) */}
+        <div className="justify-self-start flex items-center gap-2.5 shrink-0">
+          <ThemePicker reducedMotion={reducedMotion} />
+          <ModeToggle reducedMotion={reducedMotion} />
+
+          <a
+            href="#hero"
+            onClick={(e) => {
+              e.preventDefault();
+              handleLinkClick('hero');
+            }}
+            data-cursor="link"
+            className="rounded-md font-display text-[15px] font-semibold tracking-tight text-ink whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500"
+          >
+            {PROFILE.name}
+          </a>
+        </div>
+
+        {/* Floating glass navigation pill */}
         <nav
           aria-label="Primary navigation"
-          className="hidden md:flex items-center justify-center gap-7"
+          onMouseLeave={() => setHoveredId(null)}
+          className={`hidden md:flex items-center gap-0.5 rounded-full border p-1 backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-300 ${
+            scrolled
+              ? 'border-white/[0.1] bg-surface-raised/80 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.06)]'
+              : 'border-white/[0.07] bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+          }`}
         >
           {NAV_LINKS.map((item) => {
             const isActive = activeId === item.id;
@@ -97,40 +118,61 @@ export function Navbar({ reducedMotion, onNavigate }: NavbarProps) {
               <a
                 key={item.id}
                 href={`#${item.id}`}
+                onMouseEnter={() => setHoveredId(item.id)}
                 onClick={(e) => {
                   e.preventDefault();
                   handleLinkClick(item.id);
                 }}
                 data-cursor="link"
-                className={`group relative py-1 text-sm font-medium whitespace-nowrap shrink-0 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#3B82F6] ${
-                  isActive ? 'text-white' : 'text-slate-400 hover:text-white'
+                aria-current={isActive ? 'location' : undefined}
+                className={`relative rounded-full px-4 py-1.5 text-[13px] font-medium whitespace-nowrap shrink-0 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                  isActive || hoveredId === item.id ? 'text-white' : 'text-slate-400'
                 }`}
               >
-                <span>{item.label}</span>
-                <span
-                  aria-hidden="true"
-                  className={`absolute left-0 right-0 -bottom-0.5 h-[1.5px] origin-left bg-[#3B82F6] transition-transform duration-300 ease-out ${
-                    isActive
-                      ? 'scale-x-100'
-                      : 'scale-x-0 group-hover:scale-x-100'
-                  }`}
-                />
+                {pillId === item.id && (
+                  <motion.span
+                    layoutId="nav-pill"
+                    transition={
+                      reducedMotion
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 380, damping: 32 }
+                    }
+                    className={`absolute inset-0 rounded-full ${
+                      isActive
+                        ? 'bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                        : 'bg-white/[0.05]'
+                    }`}
+                  />
+                )}
+                <span className="relative z-10">{item.label}</span>
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-1/2 -bottom-[3px] h-[2px] w-4 -translate-x-1/2 rounded-full bg-brand-400 shadow-[0_0_8px_color-mix(in_srgb,var(--color-brand-400)_90%,transparent)]"
+                  />
+                )}
               </a>
             );
           })}
         </nav>
 
-        {/* Zone 3: 1 primary action (plus mobile menu button on small screens) */}
         <div className="justify-self-end flex items-center gap-3 shrink-0">
           <div className="hidden md:block">
             <MagneticButton
               href="#contact"
               onClick={() => handleLinkClick('contact')}
               cursorType="button"
-              className="rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2 text-xs font-semibold text-white shadow-sm"
+              className={`btn-sheen group rounded-full px-4 py-2 text-[13px] font-semibold ${
+                activeId === 'contact'
+                  ? 'force-dark bg-brand-600 text-white'
+                  : 'bg-white text-canvas hover:bg-slate-100'
+              } shadow-[0_8px_24px_-10px_rgba(255,255,255,0.35)]`}
             >
-              <span>Contact</span>
-              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Let&apos;s Talk</span>
+              <ArrowUpRight
+                className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                aria-hidden="true"
+              />
             </MagneticButton>
           </div>
 
@@ -140,25 +182,18 @@ export function Navbar({ reducedMotion, onNavigate }: NavbarProps) {
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav-drawer"
             onClick={() => setMobileOpen((prev) => !prev)}
-            className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-[#0D1017] text-slate-200 hover:border-white/25 transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
+            className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-surface-raised/80 backdrop-blur-xl text-slate-200 hover:border-white/25 transition-colors focus-visible:outline-2 focus-visible:outline-brand-500"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path
-                d={mobileOpen ? 'M4 4L16 16' : 'M3 6H17'}
+                d={mobileOpen ? 'M5 5L15 15' : 'M4 7H16'}
                 stroke="currentColor"
                 strokeWidth="1.6"
                 strokeLinecap="round"
                 className="transition-all duration-200"
               />
               <path
-                d="M3 10H17"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                className={`transition-opacity duration-150 ${mobileOpen ? 'opacity-0' : 'opacity-100'}`}
-              />
-              <path
-                d={mobileOpen ? 'M16 4L4 16' : 'M3 14H17'}
+                d={mobileOpen ? 'M15 5L5 15' : 'M4 13H16'}
                 stroke="currentColor"
                 strokeWidth="1.6"
                 strokeLinecap="round"
@@ -174,51 +209,63 @@ export function Navbar({ reducedMotion, onNavigate }: NavbarProps) {
         {mobileOpen && (
           <motion.div
             id="mobile-nav-drawer"
-            initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
-            transition={{ duration: reducedMotion ? 0 : 0.28, ease: MOTION_EASINGS.appleEase }}
-            className="md:hidden fixed inset-x-0 top-[68px] bottom-0 z-40 bg-[#06070A]/98 backdrop-blur-xl border-t border-white/10 px-6 py-8 flex flex-col justify-between"
+            initial={reducedMotion ? { opacity: 1 } : { opacity: 0, clipPath: 'inset(0 0 100% 0)' }}
+            animate={{ opacity: 1, clipPath: 'inset(0 0 0% 0)' }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, clipPath: 'inset(0 0 100% 0)' }}
+            transition={{ duration: reducedMotion ? 0 : 0.45, ease: MOTION_EASINGS.appleEase }}
+            className="md:hidden fixed inset-0 -z-10 bg-canvas/97 backdrop-blur-2xl px-6 pt-24 pb-8 flex flex-col justify-between"
           >
-            <nav aria-label="Mobile navigation" className="flex flex-col gap-2">
-              {NAV_LINKS.map((item, idx) => (
-                <motion.a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  initial={reducedMotion ? false : { opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{
-                    duration: reducedMotion ? 0 : 0.32,
-                    delay: reducedMotion ? 0 : 0.04 * idx,
-                    ease: MOTION_EASINGS.appleEase,
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleLinkClick(item.id);
-                  }}
-                  className={`flex items-center justify-between rounded-xl px-4 py-3.5 text-lg font-display font-medium transition-colors ${
-                    activeId === item.id
-                      ? 'bg-[#0E131D] text-white border border-white/10'
-                      : 'text-slate-300 hover:text-white hover:bg-white/[0.03]'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  <ArrowUpRight className="h-4 w-4 text-slate-500" aria-hidden="true" />
-                </motion.a>
-              ))}
+            <nav aria-label="Mobile navigation" className="flex flex-col">
+              {[{ id: 'hero', label: 'Home' }, ...NAV_LINKS, { id: 'contact', label: 'Contact' }].map(
+                (item, idx) => (
+                  <motion.a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: reducedMotion ? 0 : 0.45,
+                      delay: reducedMotion ? 0 : 0.08 + 0.045 * idx,
+                      ease: MOTION_EASINGS.appleEase,
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLinkClick(item.id);
+                    }}
+                    className="group flex items-center justify-between border-b border-white/[0.07] py-4"
+                  >
+                    <span className="flex items-baseline gap-4">
+                      <span className="text-xs text-slate-500 tabular-nums">
+                        {String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span
+                        className={`font-display text-[1.9rem] font-semibold tracking-[-0.035em] transition-colors ${
+                          activeId === item.id ? 'text-white' : 'text-slate-400 group-hover:text-white'
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                    </span>
+                    <ArrowUpRight
+                      className={`h-5 w-5 transition-colors ${
+                        activeId === item.id ? 'text-brand-400' : 'text-slate-600'
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </motion.a>
+                )
+              )}
             </nav>
 
-            <div className="pt-6 border-t border-white/10 space-y-4">
+            <div className="space-y-4">
               <button
                 type="button"
                 onClick={() => handleLinkClick('contact')}
-                className="w-full rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] px-5 py-3.5 text-sm font-semibold text-white transition-colors"
+                className="w-full rounded-full bg-white px-5 py-3.5 text-sm font-semibold text-canvas transition-colors hover:bg-slate-100"
               >
-                Contact Me
+                Start a Conversation
               </button>
-              <p className="text-xs text-slate-500 text-center">
-                {PROFILE.email}
-              </p>
+              <p className="text-xs text-slate-500 text-center break-all">{PROFILE.email}</p>
             </div>
           </motion.div>
         )}

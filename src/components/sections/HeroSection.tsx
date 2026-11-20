@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { ArrowDown, ArrowRight, ArrowUpRight, Database, Layers, Server } from 'lucide-react';
-import { HERO_FLOATING_TECH, PROFILE } from '../../data/portfolioData';
+import { motion, useScroll, useTransform } from 'motion/react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+} from 'lucide-react';
+import { PROFILE, PROJECTS, SKILLS } from '../../data/portfolioData';
 import {
   MOTION_DURATIONS,
   MOTION_EASINGS,
@@ -9,6 +13,8 @@ import {
   type ResponsiveMotionProfile,
 } from '../../lib/motionConfig';
 import { MagneticButton } from '../motion/MagneticButton';
+import { useParallaxEnabled } from '../motion/Reveal';
+import { SocialIcon } from '../ui/SocialIcon';
 
 interface HeroSectionProps {
   ready: boolean;
@@ -16,50 +22,87 @@ interface HeroSectionProps {
   onNavigate: (sectionId: string) => void;
 }
 
-const ARCHITECTURE_LAYERS = [
-  {
-    id: 'frontend',
-    label: 'Frontend Layer',
-    icon: Layers,
-    stack: 'Vue.js · React · TypeScript · Tailwind CSS',
-    detail:
-      'Reactive component trees, fluid state orchestration, and GPU-composited motion transitions.',
-  },
-  {
-    id: 'backend',
-    label: 'API & Business Logic',
-    icon: Server,
-    stack: 'Laravel · PHP · Node.js · Express.js',
-    detail:
-      'RESTful controllers, request validation, role-based permissions, and clean service boundaries.',
-  },
-  {
-    id: 'database',
-    label: 'Database Engine',
-    icon: Database,
-    stack: 'MySQL · PostgreSQL · SQLite',
-    detail:
-      'Normalized relational schemas, foreign-key constraints, and predictable query performance.',
-  },
-] as const;
+// Frontend, backend and database
+const STACK_LAYER_COUNT = 3;
 
-const DISCIPLINE_RIBBON = [
-  'Full-Stack Web Engineering',
-  'Frontend Architecture',
-  'RESTful API Design',
-  'Relational Database Modeling',
-  'UI/UX Implementation',
-  'Motion & Micro-Interactions',
-] as const;
+const TYPE_SPEED_MS = 60;
+const DELETE_SPEED_MS = 32;
+const HOLD_TYPED_MS = 1800;
+const HOLD_EMPTY_MS = 380;
+const START_DELAY_MS = 700;
+
+/**
+ * Typewriter loop under a moving brand-gradient sheen: types each phrase,
+ * holds it, backspaces it, then moves on to the next.
+ */
+function TypedRole({ phrases, animate }: { phrases: readonly string[]; animate: boolean }) {
+  const [index, setIndex] = useState(0);
+  const [count, setCount] = useState(animate ? 0 : phrases[0].length);
+  const [deleting, setDeleting] = useState(false);
+  const [started, setStarted] = useState(!animate);
+
+  const phrase = phrases[index % phrases.length];
+
+  // Wait for the name reveal before typing starts
+  useEffect(() => {
+    if (!animate) return;
+    const timer = window.setTimeout(() => setStarted(true), START_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [animate]);
+
+  useEffect(() => {
+    if (!animate || !started) return;
+
+    let delay: number;
+    let step: () => void;
+
+    if (!deleting && count < phrase.length) {
+      delay = TYPE_SPEED_MS;
+      step = () => setCount((c) => c + 1);
+    } else if (!deleting) {
+      delay = HOLD_TYPED_MS;
+      step = () => setDeleting(true);
+    } else if (count > 0) {
+      delay = DELETE_SPEED_MS;
+      step = () => setCount((c) => c - 1);
+    } else {
+      delay = HOLD_EMPTY_MS;
+      step = () => {
+        setDeleting(false);
+        setIndex((i) => (i + 1) % phrases.length);
+      };
+    }
+
+    const timer = window.setTimeout(step, delay);
+    return () => window.clearTimeout(timer);
+  }, [animate, started, deleting, count, phrase, phrases.length]);
+
+  // Keep the caret solid while typing/deleting; blink only while paused
+  const paused = !started || (!deleting && count === phrase.length) || (deleting && count === 0);
+
+  return (
+    <span aria-hidden="true" className="inline-flex min-h-[1.2em] items-center">
+      <span className="text-shimmer whitespace-pre">{phrase.slice(0, count)}</span>
+      <span
+        className={`ml-1.5 inline-block h-[0.9em] w-[3px] rounded-full bg-brand-400 ${
+          !animate ? 'opacity-0' : paused ? 'animate-caret-blink' : ''
+        }`}
+      />
+    </span>
+  );
+}
 
 export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Scroll-away parallax for the illustration (desktop, motion allowed)
+  const parallaxOn = useParallaxEnabled();
+  const { scrollYProgress: heroScroll } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] });
+  const visualY = useTransform(heroScroll, [0, 1], [0, 160]);
+  const visualOpacity = useTransform(heroScroll, [0, 0.9], [1, 0.2]);
   const spotlightRef = useRef<HTMLDivElement>(null);
   const orbOneRef = useRef<HTMLDivElement>(null);
   const orbTwoRef = useRef<HTMLDivElement>(null);
   const visualRef = useRef<HTMLDivElement>(null);
-  const [activeLayer, setActiveLayer] = useState<'frontend' | 'backend' | 'database'>('frontend');
 
   const reduced = motionProfile.tier === 'reduced';
   const nameChars = splitTextChars(PROFILE.name);
@@ -72,11 +115,6 @@ export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionPro
       const tl = gsap.timeline({ defaults: { ease: MOTION_EASINGS.expoOut } });
 
       tl.fromTo(
-        '.hero-kicker',
-        { x: -16, opacity: 0 },
-        { x: 0, opacity: 1, duration: MOTION_DURATIONS.normal, clearProps: 'transform,opacity' }
-      )
-        .fromTo(
           '.hero-char',
           { yPercent: 115, opacity: 0 },
           {
@@ -85,8 +123,7 @@ export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionPro
             duration: MOTION_DURATIONS.complex,
             stagger: 0.022 * motionProfile.staggerScale,
             clearProps: 'transform,opacity',
-          },
-          '-=0.28'
+          }
         )
         .fromTo(
           '.hero-role',
@@ -141,18 +178,6 @@ export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionPro
             clearProps: 'transform,opacity',
           },
           '-=0.68'
-        )
-        .fromTo(
-          '.hero-stack-tile',
-          { y: 14, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: MOTION_DURATIONS.normal,
-            stagger: 0.045,
-            clearProps: 'transform,opacity',
-          },
-          '-=0.48'
         );
     }, sectionRef);
 
@@ -171,7 +196,7 @@ export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionPro
         const rect = sectionRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        spotlightRef.current.style.background = `radial-gradient(620px circle at ${x}px ${y}px, rgba(37, 99, 235, 0.08), transparent 65%)`;
+        spotlightRef.current.style.background = `radial-gradient(620px circle at ${x}px ${y}px, color-mix(in srgb, var(--color-brand-600) 8%, transparent), transparent 65%)`;
       }
 
       if (orbOneRef.current) {
@@ -204,64 +229,11 @@ export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionPro
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [motionProfile.enableParallax, motionProfile.tier]);
 
-  // Lightweight ambient particle field
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !motionProfile.enableParticles) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let rafId = 0;
-    let width = (canvas.width = canvas.offsetWidth);
-    let height = (canvas.height = canvas.offsetHeight);
-
-    const particleCount = motionProfile.tier === 'desktop' ? 28 : 14;
-    const particles = Array.from({ length: particleCount }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      r: Math.random() * 1.3 + 0.5,
-      vx: (Math.random() - 0.5) * 0.22,
-      vy: (Math.random() - 0.5) * 0.22,
-      alpha: Math.random() * 0.32 + 0.1,
-    }));
-
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = canvas.offsetWidth;
-      height = canvas.height = canvas.offsetHeight;
-    };
-
-    const draw = () => {
-      ctx.clearRect(0, 0, width, height);
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
-        if (p.y < 0) p.y = height;
-        if (p.y > height) p.y = 0;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(147, 197, 253, ${p.alpha})`;
-        ctx.fill();
-      }
-      rafId = window.requestAnimationFrame(draw);
-    };
-
-    window.addEventListener('resize', handleResize, { passive: true });
-    rafId = window.requestAnimationFrame(draw);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.cancelAnimationFrame(rafId);
-    };
-  }, [motionProfile.enableParticles, motionProfile.tier]);
-
-  const currentLayer =
-    ARCHITECTURE_LAYERS.find((layer) => layer.id === activeLayer) ??
-    ARCHITECTURE_LAYERS[0];
+  const heroStats = [
+    { value: String(PROJECTS.length).padStart(2, '0'), label: 'Shipped projects' },
+    { value: String(SKILLS.length).padStart(2, '0'), label: 'Technologies' },
+    { value: String(STACK_LAYER_COUNT).padStart(2, '0'), label: 'Stack layers' },
+  ];
 
   return (
     <section
@@ -269,90 +241,73 @@ export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionPro
       ref={sectionRef}
       className="relative min-h-[100svh] flex flex-col justify-between overflow-hidden pt-28 pb-0 lg:pt-32"
     >
-      {/* Background: architectural grid, cursor spotlight, soft lighting orbs, and lightweight particles */}
+      {/* Background: masked grid, top light beam, cursor spotlight, soft orbs, particles */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-architectural-grid opacity-75" />
+        <div className="absolute inset-0 bg-architectural-grid mask-radial-top opacity-60" />
+        <div className="absolute left-1/2 top-[-260px] h-[520px] w-[960px] max-w-[160vw] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-brand-500)_16%,transparent),transparent)]" />
         <div ref={spotlightRef} className="absolute inset-0 transition-opacity duration-300" />
         <div
           ref={orbOneRef}
-          className="absolute -top-32 left-[-10%] h-[420px] w-[420px] rounded-full bg-[#2563EB]/14 blur-[110px] will-change-transform"
+          className="absolute -top-32 left-[-10%] h-[420px] w-[420px] rounded-full bg-brand-600/8 blur-[110px] will-change-transform"
         />
         <div
           ref={orbTwoRef}
-          className="absolute bottom-[-10%] right-[-8%] h-[440px] w-[440px] rounded-full bg-[#1E40AF]/14 blur-[120px] will-change-transform"
+          className="absolute bottom-[-10%] right-[-8%] h-[440px] w-[440px] rounded-full bg-brand-700/8 blur-[120px] will-change-transform"
         />
-        {motionProfile.enableParticles && (
-          <canvas
-            ref={canvasRef}
-            data-testid="hero-particles"
-            className="absolute inset-0 h-full w-full opacity-80"
-          />
-        )}
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#06070A] to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-canvas to-transparent" />
       </div>
 
-      <div className="relative z-10 mx-auto my-auto w-full max-w-6xl px-6 py-8 lg:px-8 lg:py-10">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-12">
+      <div className="relative z-10 mx-auto my-auto w-full max-w-6xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-12 lg:gap-10">
           {/* Left Column: Editorial Typography Hierarchy */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="hero-kicker flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-mono text-slate-400">
-              <span className="text-[#60A5FA]">Available for Full-Stack Opportunities</span>
-              <span aria-hidden="true">·</span>
-              <span>{PROFILE.location}</span>
-              <span aria-hidden="true">·</span>
-              <span>{PROFILE.education}</span>
-            </div>
-
-            <div className="space-y-3">
-              <h1
-                aria-label={PROFILE.name}
-                className="font-display text-5xl sm:text-6xl lg:text-[4.5rem] font-bold tracking-tight leading-[1.02] text-[#F4F6F9]"
-              >
-                <span className="inline-flex flex-wrap overflow-hidden">
-                  {nameChars.map((char, index) => (
-                    <span
-                      key={`${char}-${index}`}
-                      className={`hero-char inline-block will-change-transform ${
-                        char === ' ' ? 'w-[0.28em]' : ''
-                      }`}
-                    >
-                      {char === ' ' ? '\u00A0' : char}
-                    </span>
-                  ))}
-                </span>
-              </h1>
-
-              <p className="hero-role font-display text-lg sm:text-xl font-medium text-[#60A5FA] tracking-tight">
-                {PROFILE.role}
-              </p>
-            </div>
-
-            <blockquote className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-slate-100 max-w-2xl text-balance leading-[1.2]">
-              <span className="block overflow-hidden">
-                <span className="hero-headline-line block">
-                  “Building Digital Experiences
-                </span>
+          <div className="lg:col-span-6">
+            <h1
+              aria-label={PROFILE.name}
+              className="font-display text-[3.25rem] sm:text-7xl lg:text-[5.25rem] font-semibold tracking-[-0.05em] leading-[0.95] text-white"
+            >
+              <span aria-hidden="true" className="inline-flex flex-wrap overflow-hidden pb-[0.08em]">
+                {nameChars.map((char, index) => (
+                  <span
+                    key={`${char}-${index}`}
+                    className={`hero-char inline-block will-change-transform ${
+                      char === ' ' ? 'w-[0.24em]' : ''
+                    }`}
+                  >
+                    {char === ' ' ? ' ' : char}
+                  </span>
+                ))}
               </span>
-              <span className="block overflow-hidden">
-                <span className="hero-headline-line block">
-                  From Frontend to Backend.”
-                </span>
-              </span>
-            </blockquote>
+            </h1>
 
-            <p className="hero-desc-line max-w-xl text-[15px] sm:text-base leading-relaxed text-slate-400">
-              {PROFILE.subheadline}
+            <p
+              aria-label={PROFILE.role}
+              className="hero-role mt-5 flex items-center font-display text-[1.75rem] sm:text-4xl lg:text-[2.6rem] font-semibold tracking-[-0.035em] leading-tight"
+            >
+              <TypedRole phrases={PROFILE.typedRoles} animate={!reduced} />
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            <p className="mt-10 font-display text-[1.6rem] sm:text-[2.1rem] lg:text-[2.4rem] font-medium tracking-[-0.03em] leading-[1.15] text-white max-w-2xl">
+              <span className="block overflow-hidden pb-[0.06em]">
+                <span className="hero-headline-line block">
+                  Building Digital Experiences
+                </span>
+              </span>
+              <span className="block overflow-hidden pb-[0.06em]">
+                <span className="hero-headline-line block text-slate-500">
+                  From Frontend to Backend.
+                </span>
+              </span>
+            </p>
+
+            <div className="mt-10 flex flex-wrap items-center gap-3">
               <MagneticButton
                 onClick={() => onNavigate('projects')}
                 cursorType="button"
-                className="hero-cta group rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] px-6 py-3 text-sm font-semibold text-white shadow-[0_0_28px_rgba(37,99,235,0.28)] hover:shadow-[0_0_36px_rgba(37,99,235,0.45)]"
+                className="hero-cta force-dark btn-sheen group rounded-full bg-gradient-to-r from-brand-600 to-brand-accent hover:brightness-110 pl-6 pr-5 py-3.5 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_30px_-8px_color-mix(in_srgb,var(--color-brand-600)_70%,transparent)]"
               >
                 <span>Explore My Work</span>
                 <ArrowRight
-                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                  className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
                   aria-hidden="true"
                 />
               </MagneticButton>
@@ -360,237 +315,85 @@ export function HeroSection({ ready, motionProfile, onNavigate }: HeroSectionPro
               <MagneticButton
                 onClick={() => onNavigate('contact')}
                 cursorType="button"
-                className="hero-cta group rounded-xl border border-white/15 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/25 px-6 py-3 text-sm font-semibold text-slate-100"
+                className="hero-cta group rounded-full border border-white/12 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 px-6 py-3.5 text-sm font-semibold text-slate-100 backdrop-blur-sm"
               >
                 <span>Let&apos;s Talk</span>
-                <ArrowRight
-                  className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-white"
+                <ArrowUpRight
+                  className="h-4 w-4 text-slate-400 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white"
                   aria-hidden="true"
                 />
               </MagneticButton>
-            </div>
 
-            {/* Clean Social Profile Links */}
-            <div className="hero-desc-line flex flex-wrap items-center gap-6 pt-1 text-xs font-medium text-slate-400">
-              <a
-                href={PROFILE.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-cursor="link"
-                className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:text-white"
-                  aria-hidden="true"
+              <div className="hero-cta flex items-center gap-2 sm:ml-2">
+                <a
+                  href={PROFILE.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-cursor="link"
+                  aria-label="GitHub profile"
+                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.02] text-slate-400 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-brand-500"
                 >
-                  <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-                <span>GitHub</span>
-                <ArrowUpRight className="h-3.5 w-3.5 text-slate-500 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white" aria-hidden="true" />
-              </a>
-
-              <a
-                href={PROFILE.linkedinUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-cursor="link"
-                className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:text-white"
-                  aria-hidden="true"
+                  <SocialIcon network="GitHub" className="h-[18px] w-[18px]" />
+                </a>
+                <a
+                  href={PROFILE.linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-cursor="link"
+                  aria-label="LinkedIn profile"
+                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.02] text-slate-400 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-brand-500"
                 >
-                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
-                </svg>
-                <span>LinkedIn</span>
-                <ArrowUpRight className="h-3.5 w-3.5 text-slate-500 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-
-          {/* Right Column: Interactive Full-Stack Architecture Visual + 3x2 Precision Stack Matrix */}
-          <div className="lg:col-span-5 space-y-3.5">
-            <div
-              ref={visualRef}
-              className="hero-visual relative rounded-2xl border border-white/10 bg-[#0D1017]/92 p-6 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-md"
-            >
-              <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
-                <span className="font-display text-sm font-semibold text-slate-100">
-                  Full-Stack System Flow
-                </span>
-                <span className="font-mono text-xs text-slate-400">
-                  Client → API → DB
-                </span>
-              </div>
-
-              {/* Layer Switcher Tabs */}
-              <div
-                role="tablist"
-                aria-label="Architecture layers"
-                className="mt-4 grid grid-cols-3 gap-1.5 rounded-xl bg-[#06070A] p-1 border border-white/[0.06]"
-              >
-                {ARCHITECTURE_LAYERS.map((layer) => {
-                  const Icon = layer.icon;
-                  const active = activeLayer === layer.id;
-                  return (
-                    <button
-                      key={layer.id}
-                      role="tab"
-                      type="button"
-                      aria-selected={active}
-                      onClick={() => setActiveLayer(layer.id)}
-                      className={`flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium whitespace-nowrap transition-colors ${
-                        active
-                          ? 'bg-[#161E2E] text-white border border-[#3B82F6]/45'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      <span className="capitalize">{layer.id}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Live SVG Signal Pipeline */}
-              <div className="mt-4 px-2" aria-hidden="true">
-                <svg viewBox="0 0 360 22" className="w-full h-5">
-                  <line
-                    x1="28"
-                    y1="11"
-                    x2="332"
-                    y2="11"
-                    stroke="rgba(255,255,255,0.12)"
-                    strokeWidth="1.5"
-                  />
-                  <line
-                    x1="28"
-                    y1="11"
-                    x2="332"
-                    y2="11"
-                    stroke="#3B82F6"
-                    strokeWidth="1.5"
-                    strokeDasharray="6 18"
-                    className="animate-signal-dash"
-                  />
-                  {[28, 180, 332].map((cx, i) => {
-                    const layerId = ARCHITECTURE_LAYERS[i].id;
-                    const isNodeActive = activeLayer === layerId;
-                    return (
-                      <circle
-                        key={cx}
-                        cx={cx}
-                        cy={11}
-                        r={isNodeActive ? 5 : 3.5}
-                        fill={isNodeActive ? '#60A5FA' : '#0D1017'}
-                        stroke={isNodeActive ? '#93C5FD' : 'rgba(255,255,255,0.35)'}
-                        strokeWidth="1.5"
-                      />
-                    );
-                  })}
-                </svg>
-              </div>
-
-              {/* Active Layer Details */}
-              <div className="mt-2 rounded-xl border border-white/[0.07] bg-[#06070A]/85 p-5 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="font-display text-base font-semibold text-white">
-                    {currentLayer.label}
-                  </h2>
-                  <span className="font-mono text-[11px] text-[#60A5FA]">
-                    Active Layer
-                  </span>
-                </div>
-                <p className="text-sm leading-relaxed text-slate-300">
-                  {currentLayer.detail}
-                </p>
-                <div className="pt-2 border-t border-white/[0.06] font-mono text-xs text-slate-400">
-                  {currentLayer.stack}
-                </div>
-              </div>
-
-              {/* Architectural Data Flow Nodes */}
-              <div className="mt-4 grid grid-cols-3 gap-2.5">
-                {ARCHITECTURE_LAYERS.map((layer) => {
-                  const active = activeLayer === layer.id;
-                  return (
-                    <button
-                      key={layer.id}
-                      type="button"
-                      onClick={() => setActiveLayer(layer.id)}
-                      className={`rounded-xl border px-2.5 py-2.5 text-left transition-all duration-200 ${
-                        active
-                          ? 'border-[#3B82F6]/60 bg-[#2563EB]/12'
-                          : 'border-white/[0.07] bg-white/[0.02] hover:border-white/15'
-                      }`}
-                    >
-                      <div className="text-[11px] font-mono text-slate-400 capitalize">
-                        {layer.id}
-                      </div>
-                      <div className="mt-0.5 text-[11px] font-medium text-slate-200 whitespace-nowrap">
-                        {layer.id === 'frontend'
-                          ? 'Vue · React'
-                          : layer.id === 'backend'
-                            ? 'Laravel · Node'
-                            : 'MySQL · PgSQL'}
-                      </div>
-                    </button>
-                  );
-                })}
+                  <SocialIcon network="LinkedIn" className="h-[17px] w-[17px]" />
+                </a>
               </div>
             </div>
 
-            {/* Clean 3x2 Precision Core Stack Matrix */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {HERO_FLOATING_TECH.map((tech) => (
+            {/* Quiet stat strip */}
+            <dl className="hero-desc-line mt-12 grid max-w-lg grid-cols-3 border-t border-white/[0.08] pt-6">
+              {heroStats.map((stat, i) => (
                 <div
-                  key={tech.label}
-                  className="hero-stack-tile rounded-xl border border-white/[0.08] bg-[#0D1017]/90 px-3 py-2 text-xs font-mono transition-colors duration-200 hover:border-[#3B82F6]/45"
+                  key={stat.label}
+                  className={`${i > 0 ? 'border-l border-white/[0.08] pl-5' : ''} pr-3`}
                 >
-                  <div className="text-[#60A5FA] font-medium">{tech.label}</div>
-                  <div className="text-[11px] text-slate-500">{tech.layer}</div>
+                  <dt className="sr-only">{stat.label}</dt>
+                  <dd className="font-display text-3xl font-semibold tracking-[-0.04em] text-white tabular-nums">
+                    {stat.value}
+                  </dd>
+                  <dd className="mt-1 text-xs text-slate-500">{stat.label}</dd>
                 </div>
               ))}
-            </div>
+            </dl>
           </div>
-        </div>
 
-        {/* Scroll Indicator */}
-        <div className="mt-10 lg:mt-12 flex justify-center">
-          <button
-            type="button"
-            onClick={() => onNavigate('projects')}
-            aria-label="Scroll to Selected Work"
-            className="group inline-flex flex-col items-center gap-2 text-xs font-mono text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-2 focus-visible:outline-[#3B82F6]"
+          {/* Right Column: 3D developer illustration */}
+          <motion.div
+            style={parallaxOn ? { y: visualY, opacity: visualOpacity } : undefined}
+            className="lg:col-span-6 relative flex justify-center lg:justify-end"
           >
-            <span>Scroll to explore</span>
-            <span className="flex h-8 w-5 items-start justify-center rounded-full border border-white/20 p-1 group-hover:border-[#3B82F6]/60 transition-colors">
-              <span
-                className={`h-1.5 w-1 rounded-full bg-[#60A5FA] ${
-                  reduced ? '' : 'animate-bounce'
-                }`}
-              />
-            </span>
-            <ArrowDown className="h-3.5 w-3.5 text-slate-500 group-hover:text-[#60A5FA] transition-colors" aria-hidden="true" />
-          </button>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[80%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-brand-600)_30%,transparent),color-mix(in_srgb,var(--color-brand-600)_7%,transparent)_60%,transparent)] blur-2xl"
+            />
+
+            <div ref={visualRef} className="hero-visual relative w-full max-w-[460px] sm:max-w-[560px] lg:max-w-none lg:-mr-6 xl:-mr-12">
+              <div className={reduced ? '' : 'animate-hero-float'}>
+                <img
+                  src={PROFILE.heroIllustration}
+                  alt="3D illustration of a developer coding at a desk surrounded by tech icons"
+                  width={1200}
+                  height={810}
+                  draggable={false}
+                  fetchPriority="high"
+                  className="relative h-auto w-full select-none drop-shadow-[0_30px_40px_rgba(0,0,0,0.5)]"
+                />
+              </div>
+              <div aria-hidden="true" className="mx-auto -mt-8 h-8 w-2/3 rounded-[50%] bg-black/70 blur-xl" />
+            </div>
+          </motion.div>
         </div>
+
       </div>
 
-      {/* Editorial Discipline Ribbon */}
-      <div className="relative z-10 border-t border-white/[0.06] bg-[#06070A]/80 py-3.5 overflow-hidden">
-        <div className="animate-marquee-track flex items-center gap-8 text-xs font-mono text-slate-400 whitespace-nowrap select-none">
-          {[...DISCIPLINE_RIBBON, ...DISCIPLINE_RIBBON].map((item, idx) => (
-            <span key={`${item}-${idx}`} className="inline-flex items-center gap-8">
-              <span>{item}</span>
-              <span aria-hidden="true" className="text-[#3B82F6]">·</span>
-            </span>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }

@@ -142,7 +142,7 @@ export function Preloader({ reducedMotion, onComplete }: PreloaderProps) {
             height="16"
             viewBox="0 0 28 16"
             fill="none"
-            className="text-[#3B82F6] shrink-0"
+            className="text-brand-500 shrink-0"
           >
             <path d="M6 2L1.5 8L6 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M22 2L26.5 8L22 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -152,7 +152,7 @@ export function Preloader({ reducedMotion, onComplete }: PreloaderProps) {
 
         <div className="h-[1px] w-full bg-white/10 overflow-hidden">
           <div
-            className="h-full bg-[#3B82F6] transition-transform duration-300 ease-out origin-left"
+            className="h-full bg-brand-500 transition-transform duration-300 ease-out origin-left"
             style={{ transform: `scaleX(${progress / 100})` }}
           />
         </div>
