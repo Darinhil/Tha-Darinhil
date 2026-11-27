@@ -14,7 +14,7 @@ export const PROFILE = {
   email: 'thadarinhil@gmail.com',
   githubUrl: 'https://github.com/thadarinhil',
   linkedinUrl: 'https://www.linkedin.com/in/tha-darinhil',
-  workspaceImage: '/src/assets/images/picture.jpg',
+  workspaceImage: '/src/assets/images/image.png',
   heroIllustration: '/src/assets/images/hero-3d.webp',
   aboutIllustration: '/src/assets/images/about-3d.webp',
   workIllustration: '/src/assets/images/work-3d.webp',
